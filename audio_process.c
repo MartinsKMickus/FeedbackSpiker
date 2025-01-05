@@ -13,6 +13,8 @@ void check_portaudio_error(PaError err)
     }
 }
 
+int resolution = 256, cutoff = 0;
+
 int patestCallback(const void *inputBuffer, void *outputBuffer,
                    unsigned long framesPerBuffer,
                    const PaStreamCallbackTimeInfo *timeInfo,
@@ -24,12 +26,25 @@ int patestCallback(const void *inputBuffer, void *outputBuffer,
     float *out = (float *)outputBuffer;
     unsigned int i;
     float *in = (float *)inputBuffer;
+    int extended;
 
     for (i = 0; i < framesPerBuffer; i++)
     {
         // out[i] = data->left_phase;  /* left */
         // out[i] = data->right_phase; /* right */
-        out[i] = in[i]; /* left */
+        extended = in[i]*resolution;
+        if (extended < cutoff && extended > -cutoff)
+        {
+            out[i] = 0;
+        }
+        else
+        {
+            out[i] = (float)(extended)/resolution;
+        }
+        // out[i] = (float)(extended)/resolution;
+        
+        
+        // out[i] = in[i]; /* left */
         // out[i + 1] = in[i + 1]; /* right */
         // /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
         // data->left_phase += 0.01f;
