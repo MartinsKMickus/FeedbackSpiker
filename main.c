@@ -1,6 +1,8 @@
 #include <stdio.h>     // printf
 #include <portaudio.h> // PortAudio
+#include <string.h>    // strcmp
 #include "audio_process.h"
+#include "network.cuh"
 
 #ifdef VERSION
 char *APP_VERSION = VERSION;
@@ -10,8 +12,23 @@ char *APP_VERSION = "UNDEFINED!";
 
 #define SAMPLE_RATE (48000)
 
-int main()
+void diagnostics()
 {
+    printf("Size of Neuron: %ld bytes!\n", sizeof(struct Neuron));
+    // Perform diagnostics-related tasks here
+}
+
+int main(int argc, char *argv[])
+{
+    // Check for command line arguments
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--diagnostics") == 0) {
+            printf("Diagnostics mode!\n");
+            diagnostics();
+            return 0;
+        }
+    }
+
     printf("Feedback Spiker! Version: %s\n", APP_VERSION);
     PaError err;
     err = Pa_Initialize();
