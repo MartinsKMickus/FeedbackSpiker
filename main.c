@@ -10,7 +10,7 @@ char *APP_VERSION = VERSION;
 char *APP_VERSION = "UNDEFINED!";
 #endif
 
-#define SAMPLE_RATE (48000)
+#define SAMPLE_RATE (44100)
 
 void diagnostics()
 {
