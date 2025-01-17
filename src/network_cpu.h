@@ -1,7 +1,8 @@
 #pragma once
-#include <cuda_runtime.h> // For CUDA runtime API (__device__, __global__, etc.)
 
-const float SPIKE_VOLTAGE = 30.0f;
+#include <stdio.h> // NULL
+
+extern const float SPIKE_VOLTAGE;
 
 struct Neuron
 {
@@ -17,9 +18,9 @@ struct Neuron
     unsigned long spike_train; // Train of spikes in bitwise (can representg 64 steps)
 };
 
-struct Neuron *neurons = NULL; // Neurons represented as an array
-int neuron_count = 0, initialized_neuron_spaces = 0;
-float step_time = 1.0f; // Step time in milliseconds
+extern struct Neuron *neurons;
+extern int neuron_count, total_neuron_spaces;
+extern float step_time; // Step time in milliseconds
 
 /// @brief Initializes the network with the given number of neurons
 /// @param neuron_count How many neurons can be stored in the network
@@ -41,11 +42,6 @@ void add_neuron(int index, float v, float a, float b, float c, float d);
 /// @param weight Weight of the connection (negative for inhibitory, positive for excitatory neurons) -0.5 <= weight <= 1
 void add_connection(int from, int to, int latency, float weight);
 // TODO: Defife input and output neurons?
-
-/// @brief Simulates a single step of the network
-/// @param neurons Neuron array
-/// @param step_time Step time to simulate in milliseconds
-__device__ void update_neuron(struct Neuron *neurons, float step_time);
 
 /// @brief Can test compute performance of the network
 /// @return Step time in milliseconds

@@ -15,3 +15,5 @@ build
 bin
 # If binary ends up not in build directory
 FeedbackSpiker
+# Other files
+.vscode

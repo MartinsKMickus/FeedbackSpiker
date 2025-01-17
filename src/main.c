@@ -2,7 +2,7 @@
 #include <portaudio.h> // PortAudio
 #include <string.h>    // strcmp
 #include "audio_process.h"
-#include "network.cuh"
+#include "network_cpu.h"
 
 #ifdef VERSION
 char *APP_VERSION = VERSION;
