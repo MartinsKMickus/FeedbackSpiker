@@ -18,16 +18,41 @@ int test_network_initialization()
         printf("%d\n", total_neuron_spaces);
         return 1;
     }
-    init_network(100000);
+    if (neuron_count != 0)
+    {
+        print_error_unformatted("Neuron count is not 0! Actual: ");
+        printf("%d\n", neuron_count);
+        return 1;
+    }
+    init_network(1000000);
     print_info_unformatted("After initialization!\n");
     if (neurons == NULL)
     {
         print_error_unformatted("Neuron list is NULL!\n");
         return 1;
     }
-    if (total_neuron_spaces != 100000)
+    if (total_neuron_spaces != 1000000)
     {
         print_error_unformatted("Total neuron spaces is not 10000! Actual: ");
+        printf("%d\n", total_neuron_spaces);
+        return 1;
+    }
+    if (neuron_count != 0)
+    {
+        print_error_unformatted("Neuron count is not 0! Actual: ");
+        printf("%d\n", neuron_count);
+        return 1;
+    }
+    free_network();
+    print_info_unformatted("After deleting network!\n");
+    if (neurons != NULL)
+    {
+        print_error_unformatted("Neuron list is not NULL!\n");
+        return 1;
+    }
+    if (total_neuron_spaces != 0)
+    {
+        print_error_unformatted("Total neuron spaces is not 0! Actual: ");
         printf("%d\n", total_neuron_spaces);
         return 1;
     }

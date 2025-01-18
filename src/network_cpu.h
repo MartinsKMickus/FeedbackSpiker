@@ -2,6 +2,8 @@
 
 #include <stdio.h> // NULL
 
+// Using extern to avoid multiple definition errors and for sharing the variables between files (global variables)
+// If static is usaed then each file will have its own copy of the variable
 extern const float SPIKE_VOLTAGE;
 
 struct Neuron
@@ -26,21 +28,22 @@ extern float step_time; // Step time in milliseconds
 /// @param neuron_count How many neurons can be stored in the network
 void init_network(int neuron_count);
 
-/// @brief Adds a neuron to the network. Follow cell type distribution of these values
-/// @param index Add the neuron to the given index of all neuron list
+/// @brief Adds a neuron to the network. Follow cell type distribution of these values. For input neurons set all values to 0 as they won't be used.
 /// @param v initial membrane potential
 /// @param a recovery rate (excitatory ~0.02, inhibitory ~0.02-0.1)
 /// @param b sensitivity of the recovery variable to v changes (excitatory ~0.2, inhibitory ~0.2-0.25)
 /// @param c membrane potential reset value (around -65mV)
 /// @param d After-spike reset of the recovery variable (excitatory 8, inhibitory 2)
-void add_neuron(int index, float v, float a, float b, float c, float d);
+/// @return 0 if neuron is added, 1 adding failed
+int add_neuron(float v, float a, float b, float c, float d);
 
 /// @brief Adds a connection between two neurons
 /// @param from Index of the neuron that sends the signal
 /// @param to Index of the neuron that receives the signal
 /// @param latency Latency of the connection in steps before the signal reaches the target
 /// @param weight Weight of the connection (negative for inhibitory, positive for excitatory neurons) -0.5 <= weight <= 1
-void add_connection(int from, int to, int latency, float weight);
+/// @return 0 if connection is added, 1 adding failed
+int add_connection(int from, int to, int latency, float weight);
 // TODO: Defife input and output neurons?
 
 /// @brief Can test compute performance of the network
