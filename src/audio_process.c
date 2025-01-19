@@ -13,7 +13,7 @@ void check_portaudio_error(PaError err)
     }
 }
 
-int resolution = 256, cutoff = 0;
+int resolution = 100, cutoff = 0;
 
 int patestCallback(const void *inputBuffer, void *outputBuffer,
                    unsigned long framesPerBuffer,

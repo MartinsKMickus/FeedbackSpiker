@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h> // strcmp
-#include "../src/network_cpu.h"
+#include "../src/spiker_network.h"
 #include "../src/utilities/text_formatter.h"
 
 int test_network_initialization()
@@ -60,6 +60,37 @@ int test_network_initialization()
     return 0;
 }
 
+int test_add_neuron()
+{
+    print_info_unformatted("Testing add neuron!\n");
+    init_network(10);
+    if (neuron_count != 0)
+    {
+        print_error_unformatted("Neuron count is not 0! Actual: ");
+        printf("%d\n", neuron_count);
+        return 1;
+    }
+    add_neuron(-0.65f, 0.02f, 0.2f, -65.0f, 8.0f);
+    print_info_unformatted("After adding first neuron!\n");
+    if (neuron_count != 1)
+    {
+        print_error_unformatted("Neuron count is not 1! Actual: ");
+        printf("%d\n", neuron_count);
+        return 1;
+    }
+    add_neuron(-0.65f, 0.02f, 0.2f, -65.0f, 8.0f);
+    print_info_unformatted("After adding second neuron!\n");
+    if (neuron_count != 2)
+    {
+        print_error_unformatted("Neuron count is not 2! Actual: ");
+        printf("%d\n", neuron_count);
+        return 1;
+    }
+    free_network();
+    print_success_unformatted("Add neuron test passed!\n");
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     printf("Test executable launched!\n");
@@ -68,6 +99,9 @@ int main(int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "network_initialization") == 0) {
             failed_tests += test_network_initialization();
+        }
+        else if (strcmp(argv[i], "add_neuron") == 0) {
+            failed_tests += test_add_neuron();
         }
     }
     return failed_tests;

@@ -14,6 +14,10 @@
 char *format_text(const char* message_type, const char *text, const char *color);
 void print_and_free(char *formatted_text);
 
+// This code is C. Yet if CUDA wants to use it, it needs to be declared as C for the linker to find it
+#ifdef __cplusplus
+extern "C" {
+#endif
 // Formatted
 void print_error(const char *text);
 void print_warning(const char *text);
@@ -25,3 +29,6 @@ void print_error_unformatted(const char *text);
 void print_warning_unformatted(const char *text);
 void print_info_unformatted(const char *text);
 void print_success_unformatted(const char *text);
+#ifdef __cplusplus
+}
+#endif

@@ -2,22 +2,28 @@
 
 #include <stdio.h> // NULL
 
+#define NEURON_SPIKE_TRAIN_TYPE unsigned long
+#define MAX_NEURON_LATENCY sizeof(NEURON_SPIKE_TRAIN_TYPE) * 8
+
+// THESE MUST BE ACCESIBLE ALSO FROM THE GPU
+#define MAX_NEURON_INPUTS 1024
+
 // Using extern to avoid multiple definition errors and for sharing the variables between files (global variables)
 // If static is usaed then each file will have its own copy of the variable
 extern const float SPIKE_VOLTAGE;
 
 struct Neuron
 {
-    unsigned int inputs[1024]; // Other neuron indexes that are connected to this one
-    unsigned int latencies[1024]; // Latencies of connections
-    float weights[1024]; // Weights of connections
+    unsigned int inputs[MAX_NEURON_INPUTS]; // Other neuron indexes that are connected to this one
+    unsigned int latencies[MAX_NEURON_INPUTS]; // Latencies of connections
+    float weights[MAX_NEURON_INPUTS]; // Weights of connections
     // Izhikevich model parameters
     float v; // Membrane potential
     float u; // Recovery variable
     float a, b, c, d; // Parameters
     // I will be calculated later
     // TODO: Make diagnostics to check struct size
-    unsigned long spike_train; // Train of spikes in bitwise (can representg 64 steps)
+    NEURON_SPIKE_TRAIN_TYPE spike_train; // Train of spikes in bitwise (can representg 64 steps)
 };
 
 extern struct Neuron *neurons;
