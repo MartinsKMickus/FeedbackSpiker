@@ -3,6 +3,8 @@
 #include <stdio.h>  // printf
 #include <stdlib.h> // exit
 
+float buffer_reset_time = 1000.0f * FRAMES_PER_BUFFER / SAMPLE_RATE * 2;
+
 void check_portaudio_error(PaError err)
 {
     if (err != paNoError)
@@ -13,8 +15,6 @@ void check_portaudio_error(PaError err)
     }
 }
 
-int resolution = 100, cutoff = 0;
-
 int patestCallback(const void *inputBuffer, void *outputBuffer,
                    unsigned long framesPerBuffer,
                    const PaStreamCallbackTimeInfo *timeInfo,
@@ -22,39 +22,37 @@ int patestCallback(const void *inputBuffer, void *outputBuffer,
                    void *userData)
 {
     /* Cast data passed through stream to our structure. */
-    struct paTestData *data = (struct paTestData *)userData;
+    struct RotatingDoubleBuffer *data = (struct RotatingDoubleBuffer *)userData;
     float *out = (float *)outputBuffer;
     unsigned int i;
     float *in = (float *)inputBuffer;
-    int extended;
+    AUDIO_RESOLUTION_TYPE running_value;
+    AUDIO_RESOLUTION_TYPE *current_input;
+    AUDIO_RESOLUTION_TYPE *current_output;
+    switch (data->current_buffer)
+    {
+    case 1:
+        current_input = data->input_buffer1;
+        current_output = data->output_buffer1;
+        break;
+    case 2:
+        current_input = data->input_buffer2;
+        current_output = data->output_buffer2;
+        break;
+    }
 
     for (i = 0; i < framesPerBuffer; i++)
     {
+        running_value = (in[i]+1.0f)*AUDIO_RESOLUTION_TYPE_CAPACITY/2;
+        current_input[i] = running_value;
+        // out[i] = (float)running_value/AUDIO_RESOLUTION_TYPE - 1; /* left */
         // out[i] = data->left_phase;  /* left */
         // out[i] = data->right_phase; /* right */
-        extended = in[i]*resolution;
-        if (extended < cutoff && extended > -cutoff)
-        {
-            out[i] = 0;
-        }
-        else
-        {
-            out[i] = (float)(extended)/resolution;
-        }
-        // out[i] = (float)(extended)/resolution;
-        
-        
-        // out[i] = in[i]; /* left */
-        // out[i + 1] = in[i + 1]; /* right */
-        // /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
-        // data->left_phase += 0.01f;
-        // /* When signal reaches top, drop back down. */
-        // if (data->left_phase >= 1.0f)
-        //     data->left_phase -= 2.0f;
-        // /* higher pitch so we can distinguish left and right. */
-        // data->right_phase += 0.03f;
-        // if (data->right_phase >= 1.0f)
-        //     data->right_phase -= 2.0f;
+        // printf("Data at: %d\n", j);
+        out[i] = (float)running_value*2/AUDIO_RESOLUTION_TYPE_CAPACITY - 1;
+        // out[i] = (float)current_output[i]*2/AUDIO_RESOLUTION_TYPE_CAPACITY - 1;1
+        // current_output[i * framesPerBuffer + j] = 0;
     }
+    data->current_buffer = data->current_buffer % 2 + 1;
     return 0;
 }

@@ -6,14 +6,14 @@
 #include "spiker_network_gpu.cuh"
 #include "utilities/text_formatter.h"
 #include <time.h> // clock_gettime
+#include "utilities/input_handler.h"
+
 
 #ifdef VERSION
 char *APP_VERSION = VERSION;
 #else
 char *APP_VERSION = "UNDEFINED!";
 #endif
-
-#define SAMPLE_RATE (44100)
 
 void diagnostics()
 {
@@ -74,13 +74,14 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+    PaError err;
 
     printf("Feedback Spiker! Version: %s\n", APP_VERSION);
-    PaError err;
     err = Pa_Initialize();
     check_portaudio_error(err);
 
-    struct paTestData data;
+    struct RotatingDoubleBuffer data;
+    data.current_buffer = ATOMIC_VAR_INIT(1);
 
     PaStream *stream;
     /* Open an audio I/O stream. */
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
                                1,        /* stereo output */
                                paFloat32, /* 32 bit floating point output */
                                SAMPLE_RATE,
-                               128,            /* frames per buffer, i.e. the number
+                               FRAMES_PER_BUFFER,            /* frames per buffer, i.e. the number
                                                       of sample frames that PortAudio will
                                                       request from the callback. Many apps
                                                       may want to use
@@ -101,10 +102,43 @@ int main(int argc, char *argv[])
                                                          your callback*/
     check_portaudio_error(err);
     printf("====================================\n");
-    Pa_Sleep(1000);
+    Pa_Sleep(2000);
+    print_info("Audio buffer reset time: ");
+    printf("%.3f milliseconds\n", buffer_reset_time);
 
     err = Pa_StartStream(stream);
     check_portaudio_error(err);
+    Pa_Sleep(2000);
+
+    AUDIO_RESOLUTION_TYPE *donor;
+    AUDIO_RESOLUTION_TYPE *receiver;
+    atomic_char* buffer_mode = &data.current_buffer;
+
+    while (1)
+    {
+        char local_buffer_mode = atomic_load(buffer_mode);
+
+        if (*buffer_mode == local_buffer_mode) {
+            usleep(100); // Reduce CPU usage in case of no change
+            continue;
+        }
+
+        buffer_mode = local_buffer_mode;
+
+        // Process the active buffer
+        donor = (*buffer_mode == 1) ? data.input_buffer1 : data.input_buffer2;
+        receiver = (*buffer_mode == 1) ? data.output_buffer1 : data.output_buffer2;
+
+        for (int i = 0; i < FRAMES_PER_BUFFER; i++) {
+            receiver[i] = donor[i];
+        }
+
+        if (atomic_load(buffer_mode) != *buffer_mode) {
+            print_warning("Active audio buffer changed while processing!\n");
+        }
+    }
+    
+    
     getchar();
 
     // Pa_Sleep(15000);

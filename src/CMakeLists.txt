@@ -13,6 +13,7 @@ FetchContent_MakeAvailable(portaudio)
 add_executable(FeedbackSpiker
     main.c
     utilities/text_formatter.c
+    utilities/input_handler.c
     spiker_network.c
     spiker_network_gpu.cu
 )
