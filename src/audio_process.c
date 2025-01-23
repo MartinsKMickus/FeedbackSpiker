@@ -35,7 +35,7 @@ int patestCallback(const void *inputBuffer, void *outputBuffer,
         current_input = data->input_buffer1;
         current_output = data->output_buffer1;
         break;
-    case 2:
+    default:
         current_input = data->input_buffer2;
         current_output = data->output_buffer2;
         break;

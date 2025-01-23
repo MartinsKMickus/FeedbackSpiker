@@ -1,6 +1,6 @@
 #pragma once
 #include <portaudio.h> // PortAudio
-#include <stdatomic.h>
+// #include <stdatomic.h>
 
 #define SAMPLE_RATE 48000
 #define FRAMES_PER_BUFFER 128
@@ -14,7 +14,7 @@ struct RotatingDoubleBuffer {
     AUDIO_RESOLUTION_TYPE input_buffer2[FRAMES_PER_BUFFER];
     AUDIO_RESOLUTION_TYPE output_buffer1[FRAMES_PER_BUFFER];
     AUDIO_RESOLUTION_TYPE output_buffer2[FRAMES_PER_BUFFER];
-    atomic_char current_buffer;
+    char current_buffer;
 };
 
 void check_portaudio_error(PaError err);

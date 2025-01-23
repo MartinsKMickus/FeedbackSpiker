@@ -10,8 +10,13 @@
 
 // Using extern to avoid multiple definition errors and for sharing the variables between files (global variables)
 // If static is usaed then each file will have its own copy of the variable
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern const float SPIKE_VOLTAGE;
-
+#ifdef __cplusplus
+}
+#endif
 struct Neuron
 {
     unsigned int inputs[MAX_NEURON_INPUTS]; // Other neuron indexes that are connected to this one
@@ -25,10 +30,15 @@ struct Neuron
     // TODO: Make diagnostics to check struct size
     NEURON_SPIKE_TRAIN_TYPE spike_train; // Train of spikes in bitwise (can representg 64 steps)
 };
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern struct Neuron *neurons;
 extern int neuron_count, total_neuron_spaces;
 extern float step_time; // Step time in milliseconds
+#ifdef __cplusplus
+}
+#endif
 
 /// @brief Initializes the network with the given number of neurons
 /// @param neuron_count How many neurons can be stored in the network

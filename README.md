@@ -9,21 +9,27 @@ Neural network is able to receive instant feedback of what is its output therefo
 This tool explores principles of spiking neural networks by utilizing different computational techniques.
 Tool provides information on how a spikikng neural network bahaves in such a scenario and is it able to learn without a context.
 
-## Some specifications
-- Mono audio used
-
 ## Installation
-Installation uses CMake to avoid cross-platform compilation issues.
-### Platforms tested
-- Ubuntu WSL2 on Windows.
-- MacOS works without CUDA.
+Installation uses CMake and CUDA for neuron network processing. Code is primaly designed to work on Windows. It is recommended to use Visual Studio for compilation.
+
+### Prerequisites
+Most likely if you can install and correctly setup these prerequisites then you will also be able to continue with compilation of the code.
+1. Windows SDK and compilers. Included in Visual Studio desktop development with C++ feature ([Visual-Studio](https://visualstudio.microsoft.com/))
+2. CMake ([CMake-Downloads](https://cmake.org/download/))
+3. CUDA toolkit ([CUDA-Toolkit-Homepage](https://developer.nvidia.com/cuda-downloads))
 ### Required libraries (should be installed by CMake)
 1. PortAudio
 ### First time setup
+These can be used within termina. Otherwise Visual Studio IDE can be used.
 ```sh
-sh build.sh
+mkdir build
+cd build
+camke ..
 ```
-Then use `make` command within build folder after code changes. Binary files will be stored in `build/bin/`.
+To build (to be launched from build directory):
+```sh
+cmake --build .
+```
 
 ## Troubleshooting
 

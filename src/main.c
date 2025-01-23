@@ -34,12 +34,12 @@ void diagnostics()
     init_gpu_network();
     struct timespec start, end;
     print_info("Simulating 100000 steps on GPU!\n");
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    //clock_gettime(CLOCK_MONOTONIC, &start);
     for (size_t i = 0; i < 100000; i++)
     {
         simulate_gpu_step();
     }
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    //clock_gettime(CLOCK_MONOTONIC, &end);
     long seconds = end.tv_sec - start.tv_sec;
     long nanoseconds = end.tv_nsec - start.tv_nsec;
     double elapsed = seconds + nanoseconds * 1e-9;
@@ -81,25 +81,23 @@ int main(int argc, char *argv[])
     check_portaudio_error(err);
 
     struct RotatingDoubleBuffer data;
-    data.current_buffer = ATOMIC_VAR_INIT(1);
-
     PaStream *stream;
     /* Open an audio I/O stream. */
     err = Pa_OpenDefaultStream(&stream,
-                               1,         /* no input channels */
-                               1,        /* stereo output */
-                               paFloat32, /* 32 bit floating point output */
-                               SAMPLE_RATE,
-                               FRAMES_PER_BUFFER,            /* frames per buffer, i.e. the number
-                                                      of sample frames that PortAudio will
-                                                      request from the callback. Many apps
-                                                      may want to use
-                                                      paFramesPerBufferUnspecified, which
-                                                      tells PortAudio to pick the best,
-                                                      possibly changing, buffer size.*/
-                               patestCallback, /* this is your callback function */
-                               &data);         /*This is a pointer that will be passed to
-                                                         your callback*/
+                              1,         /* no input channels */
+                              1,        /* stereo output */
+                              paFloat32, /* 32 bit floating point output */
+                              SAMPLE_RATE,
+                              FRAMES_PER_BUFFER,            /* frames per buffer, i.e. the number
+                                                     of sample frames that PortAudio will
+                                                     request from the callback. Many apps
+                                                     may want to use
+                                                     paFramesPerBufferUnspecified, which
+                                                     tells PortAudio to pick the best,
+                                                     possibly changing, buffer size.*/
+                              patestCallback, /* this is your callback function */
+                              &data);         /*This is a pointer that will be passed to
+                                                        your callback*/
     check_portaudio_error(err);
     printf("====================================\n");
     Pa_Sleep(2000);
@@ -112,18 +110,18 @@ int main(int argc, char *argv[])
 
     AUDIO_RESOLUTION_TYPE *donor;
     AUDIO_RESOLUTION_TYPE *receiver;
-    atomic_char* buffer_mode = &data.current_buffer;
+    char* buffer_mode = &data.current_buffer;
 
     while (1)
     {
-        char local_buffer_mode = atomic_load(buffer_mode);
+        char local_buffer_mode = *buffer_mode;
 
         if (*buffer_mode == local_buffer_mode) {
-            usleep(100); // Reduce CPU usage in case of no change
+            // usleep(100); // Reduce CPU usage in case of no change
             continue;
         }
 
-        buffer_mode = local_buffer_mode;
+        *buffer_mode = local_buffer_mode;
 
         // Process the active buffer
         donor = (*buffer_mode == 1) ? data.input_buffer1 : data.input_buffer2;
@@ -133,7 +131,7 @@ int main(int argc, char *argv[])
             receiver[i] = donor[i];
         }
 
-        if (atomic_load(buffer_mode) != *buffer_mode) {
+        if (local_buffer_mode != *buffer_mode) {
             print_warning("Active audio buffer changed while processing!\n");
         }
     }
