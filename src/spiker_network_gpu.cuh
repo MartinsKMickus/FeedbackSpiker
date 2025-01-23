@@ -14,6 +14,7 @@ extern struct Neuron *gpu_neurons;
 /// @param step_time Step time to simulate in milliseconds
 __global__ void update_neuron(struct Neuron *neurons, float step_time);
 
+
 // This code will be called from C code. Need to do this because of CUDA being in C++
 #ifdef __cplusplus
 extern "C" {

@@ -12,6 +12,11 @@ Tool provides information on how a spikikng neural network bahaves in such a sce
 ## Installation
 Installation uses CMake and CUDA for neuron network processing. Code is primaly designed to work on Windows. It is recommended to use Visual Studio for compilation.
 
+### IMPORTANT
+Each tool may have its own compiling powers and will probably create new files within a project directory.
+- For VisualStudio Code you may want to check settings for CMake build directory. For VisualStudio it is `out`
+- Always check actual build log in case of not being able to compile and launch app (sometimes popup would just say that the executable is missing although build itself failed)
+
 ### Prerequisites
 Most likely if you can install and correctly setup these prerequisites then you will also be able to continue with compilation of the code.
 1. Windows SDK and compilers. Included in Visual Studio desktop development with C++ feature ([Visual-Studio](https://visualstudio.microsoft.com/))
@@ -20,15 +25,20 @@ Most likely if you can install and correctly setup these prerequisites then you 
 ### Required libraries (should be installed by CMake)
 1. PortAudio
 ### First time setup
-These can be used within termina. Otherwise Visual Studio IDE can be used.
+These can be used within terminal. CMake generates .snl file which can be opened within Visual Studio.
 ```sh
-mkdir build
-cd build
+mkdir out
+cd out
 camke ..
 ```
-To build (to be launched from build directory):
+Build commands to be launched from out directory
+### To build for debugging
 ```sh
-cmake --build .
+cmake --build . --config Debug
+```
+### To build release
+```sh
+cmake --build . --config Release
 ```
 
 ## Troubleshooting
