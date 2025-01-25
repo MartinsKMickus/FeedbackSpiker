@@ -13,6 +13,9 @@ project ("FeedbackSpiker" LANGUAGES C CUDA)
 
 set(CMAKE_C_STANDARD 99)
 
+# It seems that this line is required even if CUDA is available at path. This allows VS IDE to see CUDA headers
+include_directories("${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+
 # Add tests and install targets if needed.
 add_subdirectory(src)
 add_subdirectory(tests)

@@ -1,4 +1,4 @@
-#include "spiker_network_gpu.cuh"
+#include "spiker_network_gpu.h"
 #include "spiker_network.h"
 #include "utilities/text_formatter.h"
 

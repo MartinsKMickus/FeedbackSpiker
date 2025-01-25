@@ -1,7 +1,7 @@
 #include "spiker_network.h"
 #include <stdlib.h> // calloc
 #include "utilities/text_formatter.h"
-#include "spiker_network_gpu.cuh"
+#include "spiker_network_gpu.h"
 
 const float SPIKE_VOLTAGE = 30.0f;
 struct Neuron *neurons = NULL;
@@ -12,7 +12,7 @@ float step_time = 1.0f;
 void init_network(int neuron_count)
 {
     // !!! Function does not require best performance (no real-time usage) !!!
-    neurons = calloc(neuron_count, sizeof(struct Neuron));
+    neurons = (struct Neuron *)calloc(neuron_count, sizeof(struct Neuron));
     total_neuron_spaces = neuron_count;
     print_success("Network initialized on CPU!\n");
 }
