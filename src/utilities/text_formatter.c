@@ -7,7 +7,12 @@ char *format_text(const char* message_type, const char *text, const char *color)
 {
     // 4 is the length of "[]: "
     char *formatted_text = (char *)malloc(4 + strlen(message_type) + strlen(text) + strlen(color) + strlen(RESET) + 1);
-    printf(formatted_text, "[%s%s%s]: %s", color, message_type, RESET, text); // Binary zero is added automatically
+    if (formatted_text == NULL) {
+        fprintf(stderr, "Memory allocation for formatted text output failed!\n");
+        printf("[MESSAGE][%s]: %s", message_type, text);
+        return NULL; // Handle the error appropriately
+    }
+    sprintf(formatted_text, "[%s%s%s]: %s", color, message_type, RESET, text); // Binary zero is added automatically
     return formatted_text;
 }
 

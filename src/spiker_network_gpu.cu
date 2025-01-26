@@ -1,6 +1,19 @@
 #include "spiker_network_gpu.h"
 #include "spiker_network.h"
 #include "utilities/text_formatter.h"
+#include "device_launch_parameters.h"
+
+// nvcc does not seem to like variadic macros, so we have to define
+// one for each kernel parameter list:
+#ifdef __CUDACC__
+#define KERNEL_ARGS2(grid, block) <<< grid, block >>>
+#define KERNEL_ARGS3(grid, block, sh_mem) <<< grid, block, sh_mem >>>
+#define KERNEL_ARGS4(grid, block, sh_mem, stream) <<< grid, block, sh_mem, stream >>>
+#else
+#define KERNEL_ARGS2(grid, block)
+#define KERNEL_ARGS3(grid, block, sh_mem)
+#define KERNEL_ARGS4(grid, block, sh_mem, stream)
+#endif
 
 unsigned int GPU_READY = 0;
 Neuron *gpu_neurons;
@@ -32,8 +45,8 @@ __global__ void update_neuron(Neuron *neurons, float step_time)
 
 extern "C" int init_gpu_network()
 {
-    cudaMemcpyFromSymbol(&MAX_NEURON_INPUTS_GPU, MAX_NEURON_INPUTS, sizeof(MAX_NEURON_INPUTS));
-    cudaMemcpyFromSymbol(&SPIKE_VOLTAGE_GPU, SPIKE_VOLTAGE, sizeof(SPIKE_VOLTAGE));
+    cudaMemcpyFromSymbol(&MAX_NEURON_INPUTS_GPU, (void *)MAX_NEURON_INPUTS, sizeof(MAX_NEURON_INPUTS));
+    cudaMemcpyFromSymbol(&SPIKE_VOLTAGE_GPU, &SPIKE_VOLTAGE, sizeof(SPIKE_VOLTAGE));
     cudaMalloc(&gpu_neurons, sizeof(Neuron) * neuron_count);
     cudaMemcpy(gpu_neurons, neurons, sizeof(Neuron) * neuron_count, cudaMemcpyHostToDevice);
 
@@ -48,8 +61,8 @@ extern "C" int simulate_gpu_step()
     {
         return 1;
     }
-    update_neuron<<<neuron_count / 256 + 1, 256>>>(gpu_neurons, 0.1);
-    // cudaDeviceSynchronize();
+    update_neuron KERNEL_ARGS2(neuron_count / 256 + 1, 256)(gpu_neurons, 0.1f);
+    cudaDeviceSynchronize();
     cudaMemcpy(neurons, gpu_neurons, sizeof(Neuron) * neuron_count, cudaMemcpyDeviceToHost);
     return 0;
 }

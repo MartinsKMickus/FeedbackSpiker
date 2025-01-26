@@ -7,6 +7,7 @@
 #include "utilities/text_formatter.h"
 #include <time.h> // clock_gettime
 #include "utilities/input_handler.h"
+#include "utilities/code_measurements.h"
 
 
 #ifdef VERSION
@@ -15,15 +16,15 @@ char APP_VERSION[] = VERSION;
 char APP_VERSION[] = "UNDEFINED!";
 #endif
 
-void diagnostics()
+static void diagnostics()
 {
     size_t neuron_size = sizeof(struct Neuron);
     size_t diagnostic_neuron_count = 100000;
     print_info("Size of Neuron: ");
-    printf("%ld bytes!\n", neuron_size);
+    printf("%llu bytes!\n", neuron_size);
     print_info("Trying to initialize network with ");
-    printf("%ld neurons! ", diagnostic_neuron_count);
-    printf("Network size: %ld bytes, %ld megabytes\n", neuron_size * diagnostic_neuron_count, neuron_size * diagnostic_neuron_count / 1024 / 1024);
+    printf("%llu neurons! ", diagnostic_neuron_count);
+    printf("Network size: %llu bytes, %llu megabytes\n", neuron_size * diagnostic_neuron_count, neuron_size * diagnostic_neuron_count / 1024 / 1024);
     print_info("Initializing network on CPU!\n");
     init_network(diagnostic_neuron_count);
     for (size_t i = 0; i < diagnostic_neuron_count; i++)
@@ -32,22 +33,17 @@ void diagnostics()
     }
     print_info("Initializing network on GPU!\n");
     init_gpu_network();
-    struct timespec start, end;
     print_info("Simulating 100000 steps on GPU!\n");
-    //clock_gettime(CLOCK_MONOTONIC, &start);
+    start_chronometer();
     for (size_t i = 0; i < 100000; i++)
     {
         simulate_gpu_step();
     }
-    //clock_gettime(CLOCK_MONOTONIC, &end);
-    long seconds = end.tv_sec - start.tv_sec;
-    long nanoseconds = end.tv_nsec - start.tv_nsec;
-    double elapsed = seconds + nanoseconds * 1e-9;
+    double elapsed = stop_chronometer();
     print_info("Execution time on GPU: ");
-    printf("%.9f seconds\n", elapsed);
+    printf("%.2f miliseconds\n", elapsed);
     free_gpu_network();
     free_network();
-    printf("ffff\n");
     // Perform diagnostics-related tasks here
 }
 
@@ -118,7 +114,6 @@ int main(int argc, char *argv[])
         char local_buffer_mode = *buffer_mode;
 
         if (*buffer_mode == local_buffer_mode) {
-            // usleep(100); // Reduce CPU usage in case of no change
             continue;
         }
 
@@ -136,9 +131,6 @@ int main(int argc, char *argv[])
             print_warning("Active audio buffer changed while processing!\n");
         }
     }
-    
-    
-    getchar();
 
     // Pa_Sleep(15000);
 

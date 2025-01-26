@@ -16,6 +16,7 @@ add_executable(FeedbackSpiker
     "utilities/input_handler.c"
     "spiker_network.c"
     "spiker_network_gpu.cu"
+    "utilities/code_measurements.c"
 )
 
 set_property(TARGET FeedbackSpiker PROPERTY CUDA_ARCHITECTURES native) # Without this there is a warning CMAKE >3.18 (you can comment this out and see)
