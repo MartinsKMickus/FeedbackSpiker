@@ -12,35 +12,35 @@ int test_network_initialization()
         print_error_unformatted("Neuron list is not NULL!\n");
         return 1;
     }
-    if (total_neuron_spaces != 0)
+    if (main_neuron_spaces != 0)
     {
         print_error_unformatted("Total neuron spaces is not 0! Actual: ");
-        printf("%d\n", total_neuron_spaces);
+        printf("%d\n", main_neuron_spaces);
         return 1;
     }
-    if (neuron_count != 0)
+    if (main_neuron_count != 0)
     {
         print_error_unformatted("Neuron count is not 0! Actual: ");
-        printf("%d\n", neuron_count);
+        printf("%d\n", main_neuron_count);
         return 1;
     }
-    init_network(1000000);
+    init_network(0, 1000000, 0);
     print_info_unformatted("After initialization!\n");
     if (neurons == NULL)
     {
         print_error_unformatted("Neuron list is NULL!\n");
         return 1;
     }
-    if (total_neuron_spaces != 1000000)
+    if (main_neuron_spaces != 1000000)
     {
         print_error_unformatted("Total neuron spaces is not 10000! Actual: ");
-        printf("%d\n", total_neuron_spaces);
+        printf("%d\n", main_neuron_spaces);
         return 1;
     }
-    if (neuron_count != 0)
+    if (main_neuron_count != 0)
     {
         print_error_unformatted("Neuron count is not 0! Actual: ");
-        printf("%d\n", neuron_count);
+        printf("%d\n", main_neuron_count);
         return 1;
     }
     free_network();
@@ -50,10 +50,10 @@ int test_network_initialization()
         print_error_unformatted("Neuron list is not NULL!\n");
         return 1;
     }
-    if (total_neuron_spaces != 0)
+    if (main_neuron_spaces != 0)
     {
         print_error_unformatted("Total neuron spaces is not 0! Actual: ");
-        printf("%d\n", total_neuron_spaces);
+        printf("%d\n", main_neuron_spaces);
         return 1;
     }
     print_success_unformatted("Network initialization test passed!\n");
@@ -63,27 +63,27 @@ int test_network_initialization()
 int test_add_neuron()
 {
     print_info_unformatted("Testing add neuron!\n");
-    init_network(10);
-    if (neuron_count != 0)
+    init_network(0, 10, 0);
+    if (main_neuron_count != 0)
     {
         print_error_unformatted("Neuron count is not 0! Actual: ");
-        printf("%d\n", neuron_count);
+        printf("%d\n", main_neuron_count);
         return 1;
     }
     add_neuron(-0.65f, 0.02f, 0.2f, -65.0f, 8.0f);
     print_info_unformatted("After adding first neuron!\n");
-    if (neuron_count != 1)
+    if (main_neuron_count != 1)
     {
         print_error_unformatted("Neuron count is not 1! Actual: ");
-        printf("%d\n", neuron_count);
+        printf("%d\n", main_neuron_count);
         return 1;
     }
     add_neuron(-0.65f, 0.02f, 0.2f, -65.0f, 8.0f);
     print_info_unformatted("After adding second neuron!\n");
-    if (neuron_count != 2)
+    if (main_neuron_count != 2)
     {
         print_error_unformatted("Neuron count is not 2! Actual: ");
-        printf("%d\n", neuron_count);
+        printf("%d\n", main_neuron_count);
         return 1;
     }
     free_network();

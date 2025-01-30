@@ -31,16 +31,24 @@ extern "C" {
 
 extern const float SPIKE_VOLTAGE;
 extern struct Neuron *neurons;
-extern int neuron_count, total_neuron_spaces;
+extern int main_neuron_count, main_neuron_spaces, input_neurons, output_neurons;
 extern float step_time; // Step time in milliseconds
+// Setting variables
+extern int allow_self_connections;
 
 #ifdef __cplusplus
 }
 #endif
 
-/// @brief Initializes the network with the given number of neurons
-/// @param neuron_count How many neurons can be stored in the network
-void init_network(int neuron_count);
+/// @param main_neuron_count How many neurons can be stored in the network
+
+/// <summary>
+/// Initializes the network with enough spaces for the given number of neurons
+/// </summary>
+/// <param name="input_count">- How many inputs</param>
+/// <param name="main_neuron_count">- How many processing neurons</param>
+/// <param name="output_count">- How many outputs (must be less than processing neuron count)</param>
+int init_network(int input_count, int main_neuron_count, int output_count);
 
 /// @brief Adds a neuron to the network. Follow cell type distribution of these values. For input neurons set all values to 0 as they won't be used.
 /// @param v initial membrane potential

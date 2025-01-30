@@ -48,8 +48,8 @@ extern "C" int init_gpu_network()
 {
     cudaMemcpyFromSymbol(&MAX_NEURON_INPUTS_GPU, (void *)MAX_NEURON_INPUTS, sizeof(MAX_NEURON_INPUTS));
     cudaMemcpyFromSymbol(&SPIKE_VOLTAGE_GPU, &SPIKE_VOLTAGE, sizeof(SPIKE_VOLTAGE));
-    cudaMalloc(&gpu_neurons, sizeof(Neuron) * neuron_count);
-    cudaMemcpy(gpu_neurons, neurons, sizeof(Neuron) * neuron_count, cudaMemcpyHostToDevice);
+    cudaMalloc(&gpu_neurons, sizeof(Neuron) * main_neuron_count);
+    cudaMemcpy(gpu_neurons, neurons, sizeof(Neuron) * main_neuron_count, cudaMemcpyHostToDevice);
 
     GPU_READY = 1;
     print_success("GPU network initialized\n");
@@ -62,9 +62,9 @@ extern "C" int simulate_gpu_step()
     {
         return 1;
     }
-    update_neuron KERNEL_ARGS2(neuron_count / 256 + 1, 256)(gpu_neurons, 0.1f);
+    update_neuron KERNEL_ARGS2(main_neuron_count / 256 + 1, 256)(gpu_neurons, 0.1f);
     cudaDeviceSynchronize();
-    cudaMemcpy(neurons, gpu_neurons, sizeof(Neuron) * neuron_count, cudaMemcpyDeviceToHost);
+    cudaMemcpy(neurons, gpu_neurons, sizeof(Neuron) * main_neuron_count, cudaMemcpyDeviceToHost);
     return 0;
 }
 

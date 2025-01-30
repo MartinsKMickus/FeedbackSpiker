@@ -26,7 +26,7 @@ static void diagnostics()
     printf("%llu neurons! ", diagnostic_neuron_count);
     printf("Network size: %llu bytes, %llu megabytes\n", neuron_size * diagnostic_neuron_count, neuron_size * diagnostic_neuron_count / 1024 / 1024);
     print_info("Initializing network on CPU!\n");
-    init_network(diagnostic_neuron_count);
+    init_network(0, diagnostic_neuron_count, 0);
     for (size_t i = 0; i < diagnostic_neuron_count; i++)
     {
         add_neuron(0, 0, 0, 0, 0);
