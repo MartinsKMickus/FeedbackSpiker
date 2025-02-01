@@ -3,7 +3,7 @@
 #include <stdlib.h>  // Required for rand() and RAND_MAX
 
 int neuron_properties_initialized = 0;
-long neuron_property_seed = 1;
+long long neuron_property_seed = 1;
 
 static void init_neuron_properties()
 {
@@ -13,12 +13,18 @@ static void init_neuron_properties()
 	}
 	neuron_property_seed = time(0);
 	srand(neuron_property_seed);
+	neuron_properties_initialized = 1;
 }
 
-static float get_random_number()
+float get_random_number()
 {
 	init_neuron_properties();
 	return ((float)rand() / (float)RAND_MAX);
+}
+
+float default_membrane_potential_value()
+{
+	return -65.0f;
 }
 
 float excitatory_a_value()

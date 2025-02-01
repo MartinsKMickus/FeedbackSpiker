@@ -4,12 +4,15 @@
 
 #define NEURON_SPIKE_TRAIN_TYPE unsigned long
 #define MAX_NEURON_LATENCY sizeof(NEURON_SPIKE_TRAIN_TYPE) * 8
+#define EX_IN_RATIO 4.0f
 
 // THESE MUST BE ACCESIBLE ALSO FROM THE GPU
+// TODO: transfer to dynamic variables: min_connections, max_connections
 #define MAX_NEURON_INPUTS 1024
 
 struct Neuron
 {
+    unsigned int incomming_connections;
     unsigned int inputs[MAX_NEURON_INPUTS]; // Other neuron indexes that are connected to this one
     unsigned int latencies[MAX_NEURON_INPUTS]; // Latencies of connections
     float weights[MAX_NEURON_INPUTS]; // Weights of connections
@@ -26,15 +29,26 @@ struct Neuron
 // If static is usaed then each file will have its own copy of the variable
 // Checking if compiled as cpp because for some symbols we need to specify linking rules
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-extern const float SPIKE_VOLTAGE;
-extern struct Neuron *neurons;
-extern int main_neuron_count, main_neuron_spaces, input_neurons, output_neurons;
-extern float step_time; // Step time in milliseconds
-// Setting variables
-extern int allow_self_connections;
+    /// <summary>
+    /// Neuron array starts with X input neurons. Continues with N main (process neurons) starting with inhibitory and ending with excitatory. Last Y neurons of array are outputs (should be all excitatory)
+    /// [INPUT, INPUT, INPUT, INH_N, EX_N, EX_N, EX_N, EX_N]
+    /// </summary>
+    extern struct Neuron *neurons;
+    extern int main_neuron_count, main_neuron_spaces, input_neurons, output_neurons;
+    extern int recommended_excitatory_neuron_count, recommended_inhibitory_neuron_count;
+    extern float step_time; // Step time in milliseconds
+
+    // Setting variables
+    extern int allow_self_connections;
+    extern const float SPIKE_VOLTAGE;
+    /// <summary>
+    /// Min and max connections neuron can have
+    /// </summary>
+    extern int min_connections, max_connections;
 
 #ifdef __cplusplus
 }
@@ -66,7 +80,19 @@ int add_neuron(float v, float a, float b, float c, float d);
 /// @param weight Weight of the connection (negative for inhibitory, positive for excitatory neurons) -0.5 <= weight <= 1
 /// @return 0 if connection is added, 1 adding failed
 int add_connection(int from, int to, int latency, float weight);
-// TODO: Defife input and output neurons?
+
+/// <summary>
+/// Populates neuron network with recommeded ratios and settings for neurons
+/// </summary>
+/// <returns></returns>
+int populate_neuron_network_automatically();
+
+
+/// <summary>
+/// Automatically connects neurons within neural network
+/// </summary>
+/// <returns></returns>
+int connect_neuron_network_automatically();
 
 /// @brief Can test compute performance of the network
 /// @return Step time in milliseconds

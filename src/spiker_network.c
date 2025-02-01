@@ -2,12 +2,26 @@
 #include <stdlib.h> // calloc
 #include "utilities/text_formatter.h"
 #include "spiker_network_gpu.h"
+#include "neuron_properties.h"
+#include "utilities/code_measurements.h"
 
-const float SPIKE_VOLTAGE = 30.0f;
 struct Neuron *neurons = NULL;
+
+/// <summary>
+/// MUST USE variables
+/// </summary>
 int main_neuron_count = 0, main_neuron_spaces = 0, input_neurons = 0, output_neurons = 0;
+
+/// <summary>
+/// INFORMATIVE variables
+/// </summary>
+int recommended_excitatory_neuron_count = 0, recommended_inhibitory_neuron_count = 0;
 float step_time = 1.0f;
-int allow_self_connections = 0;
+
+// CONFIGURATION variables
+int allow_self_connections = 0; // DO NOT ALLOW SELF CONNECTIONS
+const float SPIKE_VOLTAGE = 30.0f;
+int min_connections = 10, max_connections = MAX_NEURON_INPUTS;
 
 
 int init_network(int input_count, int main_neuron_count, int output_count)
@@ -19,7 +33,14 @@ int init_network(int input_count, int main_neuron_count, int output_count)
         printf("Asked for: %d processing neurons and %d outputs\n", main_neuron_count, output_count);
         return 1;
     }
-    neurons = (struct Neuron *)calloc((size_t)input_count + (size_t)main_neuron_count, sizeof(struct Neuron));
+    recommended_inhibitory_neuron_count = (int)(main_neuron_count / EX_IN_RATIO); // (int) to prevent data loss warning
+    recommended_excitatory_neuron_count = main_neuron_count - recommended_inhibitory_neuron_count;
+    if (recommended_excitatory_neuron_count < output_count)
+    {
+        print_warning("Current neural network configuration does not allign with recommendations. ");
+        printf("Output count %d exceeds recommended count of excitatory neurons %d. This means you will have to rely on custom configuration or use inhibitory neurons as outputs.\n", recommended_excitatory_neuron_count, output_count);
+    }
+    neurons = (struct Neuron *)calloc((size_t)input_count + (size_t)main_neuron_count, sizeof(struct Neuron)); // Calloc to clear any data
     input_neurons = input_count;
     main_neuron_spaces = main_neuron_count;
     output_neurons = output_count;
@@ -31,6 +52,8 @@ int add_neuron(float v, float a, float b, float c, float d)
     // !!! Function does not require best performance (no real-time usage) !!!
     if (main_neuron_count >= main_neuron_spaces)
     {
+        print_error("Cannot add new neuron because there is no space left.");
+        printf("Used all %d main neuron spaces\n", main_neuron_spaces);
         return 1;
     }
     int current_index = input_neurons + main_neuron_count;
@@ -46,17 +69,20 @@ int add_connection(int from, int to, int latency, float weight)
 {
     // !!! Function does not require best performance (no real-time usage) !!!
     unsigned int failure = 0, warning = 0;
-    if (from == to && !allow_self_connections)
-    {
-        print_error("Cannot add neuron connection to itself: ");
-        failure = 1;
-    }
-    else if (from >= main_neuron_count + input_neurons || to >= main_neuron_count + input_neurons || from < 0 || to < 0)
+    // Connector assumes index start from 1 due to index 0 in neuron metadata being no connection.
+    from--;
+    to--;
+    if (from >= main_neuron_count + input_neurons || to >= main_neuron_count + input_neurons || from < 0 || to < 0)
     {
         print_error("Cannot add neuron connection due to invalid neuron index: ");
         failure = 1;
     }
-    else if (latency < 0 || latency >= MAX_NEURON_LATENCY)
+    else if (from == to && !allow_self_connections)
+    {
+        print_error("Cannot add neuron connection to itself: ");
+        failure = 1;
+    }
+    else if (latency < 1 || latency >= MAX_NEURON_LATENCY)
     {
         print_error("Cannot add neuron connection due to invalid latency: ");
         failure = 1;
@@ -74,21 +100,103 @@ int add_connection(int from, int to, int latency, float weight)
     {
         return 1;
     }
-    size_t i = 0;
-    while (i < MAX_NEURON_INPUTS)
+    size_t at_index = neurons[to].incomming_connections;
+    if (at_index >= MAX_NEURON_INPUTS)
     {
-        if (neurons[to].inputs[i] == 0)
-        {
-            neurons[to].inputs[i] = from;
-            neurons[to].latencies[i] = latency;
-            neurons[to].weights[i] = weight;
-            return 0;
-        }
-        i++;
+        print_error("Cannot add neuron connection due to full input list: ");
+        printf("from: %d, to: %d, latency: %d, weight: %f\n", from, to, latency, weight);
+        return 1;
     }
-    print_error("Cannot add neuron connection due to full input list: ");
-    printf("from: %d, to: %d, latency: %d, weight: %f\n", from, to, latency, weight);
-    return 1;
+    neurons[to].inputs[at_index] = from + 1;
+    neurons[to].latencies[at_index] = latency;
+    neurons[to].weights[at_index] = weight;
+    return 0;
+}
+
+int populate_neuron_network_automatically()
+{
+    start_chronometer();
+    int fallback_mode = 0;
+    if (recommended_excitatory_neuron_count + recommended_inhibitory_neuron_count > main_neuron_spaces)
+    {
+        print_error("Automatic neuron network populating function encountered bad status. ");
+        printf("Recommended Ex_n count %d and In_n count %d exceeds total space %d\n", recommended_excitatory_neuron_count, recommended_inhibitory_neuron_count, main_neuron_spaces);
+        fallback_mode = 0;
+    }
+    if (main_neuron_count >= main_neuron_spaces)
+    {
+        print_error("Cannot automatically populate neural network because it is full. ");
+        printf("All %d main neuron spaces used\n", main_neuron_spaces);
+        return 1;
+    }
+    if (fallback_mode)
+    {
+        // Fill network only with excitatrory neurons due to missconfiguration
+        for (size_t i = 0; i < main_neuron_spaces; i++)
+        {
+            add_neuron(default_membrane_potential_value(), excitatory_a_value(), excitatory_b_value(), excitatory_c_value(), excitatory_d_value());
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < recommended_inhibitory_neuron_count; i++)
+        {
+            add_neuron(default_membrane_potential_value(), inhibitory_a_value(), inhibitory_b_value(), inhibitory_c_value(), inhibitory_d_value());
+        }
+        for (size_t i = 0; i < recommended_excitatory_neuron_count; i++)
+        {
+            add_neuron(default_membrane_potential_value(), excitatory_a_value(), excitatory_b_value(), excitatory_c_value(), excitatory_d_value());
+        }
+    }
+    double time_passed = stop_chronometer();
+    print_success("Neuron network automatically populated. ");
+    printf("Took %.2f miliseconds\n", time_passed);
+    return 0;
+}
+
+int connect_neuron_network_automatically()
+{
+    start_chronometer();
+    int neuron_connection_count_blueprint = 0, connection_from = 0, latency = 1;
+    float connecting_weight = 0;
+    for (size_t i = 0; i < main_neuron_count; i++)
+    {
+        if (i % 20000 == 0)
+        {
+            print_info("Neuron network auto-connect progress: ");
+            printf("%.2f%%\n", (float)i / (float)main_neuron_count * 100.0f);
+        }
+        neuron_connection_count_blueprint = get_random_number() * (max_connections - min_connections) + min_connections;
+        if (neuron_connection_count_blueprint > MAX_NEURON_INPUTS)
+        {
+            print_error("Fatal failure while auto-generating neuron connection count. ");
+            printf("Tried to make %d connections yet total free spaces %d\n", neuron_connection_count_blueprint, MAX_NEURON_INPUTS);
+            return 1;
+        }
+        for (size_t j = 0; j < neuron_connection_count_blueprint; j++)
+        {
+            connection_from = get_random_number() * (input_neurons + main_neuron_count - 1);
+            if (i == connection_from)
+            {
+                j--;
+                continue;
+            }
+            // TODO: Set latency based on neuron distance
+            latency = 1;
+            // TODO: Set weight based on connecting neuron type (check indexes, check if correct ratios)
+            connecting_weight = 0.01; // Default excitatory
+            if (add_connection(connection_from + 1, input_neurons + i + 1, latency, connecting_weight))
+            {
+                // Adding connection failed. Try again
+                j--;
+                // TODO: PREVENT FOREVER LOOP if too much failures!!!
+            }
+        }
+    }
+    double time_passed = stop_chronometer();
+    print_success("Neuron network automatically connected. ");
+    printf("Took %.2f miliseconds\n", time_passed);
+    return 0;
 }
 
 void simulate_step()

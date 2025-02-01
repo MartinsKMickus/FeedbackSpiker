@@ -1,5 +1,5 @@
 #include <stdio.h>     // printf
-#include <portaudio.h> // PortAudio
+#include <portaudio.h> // PortAudio (still haven't got rid of this :D)
 #include <string.h>    // strcmp
 #include "audio_process.h"
 #include "spiker_network.h"
@@ -8,6 +8,7 @@
 #include <time.h> // clock_gettime
 #include "utilities/input_handler.h"
 #include "utilities/code_measurements.h"
+#include "neuron_properties.h"
 
 
 #ifdef VERSION
@@ -19,18 +20,18 @@ char APP_VERSION[] = "UNDEFINED!";
 static void diagnostics()
 {
     size_t neuron_size = sizeof(struct Neuron);
-    size_t diagnostic_neuron_count = 100000;
+    int diagnostic_neuron_count = 100000;
     print_info("Size of Neuron: ");
     printf("%llu bytes!\n", neuron_size);
     print_info("Trying to initialize network with ");
-    printf("%llu neurons! ", diagnostic_neuron_count);
+    printf("%d neurons! ", diagnostic_neuron_count);
     printf("Network size: %llu bytes, %llu megabytes\n", neuron_size * diagnostic_neuron_count, neuron_size * diagnostic_neuron_count / 1024 / 1024);
     print_info("Initializing network on CPU!\n");
     init_network(0, diagnostic_neuron_count, 0);
-    for (size_t i = 0; i < diagnostic_neuron_count; i++)
-    {
-        add_neuron(0, 0, 0, 0, 0);
-    }
+    print_info("Populating network!\n");
+    populate_neuron_network_automatically();
+    print_info("Connecting network!\n");
+    connect_neuron_network_automatically();
     print_info("Initializing network on GPU!\n");
     init_gpu_network();
     print_info("Simulating 100000 steps on GPU!\n");
@@ -71,6 +72,9 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+    print_info("No arguments provided. Entering diagnostics mode!\n");
+    diagnostics();
+    return 0;
     PaError err;
 
     printf("Feedback Spiker! Version: %s\n", APP_VERSION);

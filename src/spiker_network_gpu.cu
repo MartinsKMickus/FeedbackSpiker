@@ -26,7 +26,7 @@ __global__ void update_neuron(Neuron *neurons, float step_time)
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     float I = 0;
     size_t i = 0;
-    while (neurons[index].inputs[i] != 0 && i < MAX_NEURON_INPUTS_GPU)
+    while (i < neurons[index].incomming_connections)
     {
         I += (neurons[neurons[index].inputs[i]].spike_train & (1 << neurons[index].latencies[i])) * neurons[index].weights[i];
         i++;
