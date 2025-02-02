@@ -18,7 +18,7 @@ add_executable(FeedbackSpiker
     "spiker_network_gpu.cu"
     "utilities/code_measurements.c"
     "neuron_properties.c"
-)
+ "screen_utils/array_transformer.c")
 
 # For WIN32 screen framework two libraries are required
 if (WIN32)

@@ -6,11 +6,12 @@
 // Global variables for demonstration
 static HBITMAP g_hDIBSection = NULL;
 static void* g_pBits = NULL;
-int     g_Width = 500;
-int     g_Height = 500;
+int     g_Width = 1500;
+int     g_Height = 1500;
 static HWND    g_hWnd = NULL;
 
 int g_Running = TRUE;
+int g_expecting_screen = 1;
 
 // Forward declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -70,7 +71,8 @@ DWORD WINAPI WindowThreadProc(LPVOID lpParam)
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        Sleep(1);
+        g_expecting_screen = 1;
+        Sleep(16);
     }
 
     // Normally we'd never get here unless we break from the loop,
@@ -173,31 +175,38 @@ void CreateDIB(HWND hWnd)
     ReleaseDC(hWnd, hdc);
 
     // Request a paint
-    InvalidateRect(hWnd, NULL, FALSE);
+    //InvalidateRect(hWnd, NULL, FALSE);
 }
 
 // Example function to fill the DIB
 void fill_white_pixels(const char* screen_buffer)
 {
-    if (!g_pBits) return;
-    uint32_t* pixels = (uint32_t*)g_pBits;
-    for (size_t i = 0; i < g_Width * g_Height; i++) {
-        pixels[i] = 0x00000000; // Black
-    }
-
-    size_t index = 0;
-    for (int y = 0; y < g_Height; ++y)
+    if (!g_pBits || !g_expecting_screen)
     {
-        for (int x = 0; x < g_Width; ++x)
-        {
-            index = x + y * g_Width;
-
-            uint8_t r = (uint8_t)screen_buffer[index];
-            uint8_t g = r;
-            uint8_t b = r;
-            // Typically BGRA in 32-bit DIB
-            pixels[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
-        }
+        return;
     }
+    uint32_t* pixels = (uint32_t*)g_pBits;
+    char pixel;
+    for (size_t i = 0; i < g_Width * g_Height; i++)
+    {
+        pixel = (char)screen_buffer[i];
+        pixels[i] = (0xFF << 24) | (pixel << 16) | (pixel << 8) | pixel; // White or black
+    }
+
+    //size_t index = 0;
+    //for (int y = 0; y < g_Height; ++y)
+    //{
+    //    for (int x = 0; x < g_Width; ++x)
+    //    {
+    //        index = x + y * g_Width;
+
+    //        uint8_t r = (uint8_t)screen_buffer[index];
+    //        uint8_t g = r;
+    //        uint8_t b = r;
+    //        // Typically BGRA in 32-bit DIB
+    //        pixels[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+    //    }
+    //}
     InvalidateRect(g_hWnd, NULL, FALSE);
+    g_expecting_screen = 0;
 }

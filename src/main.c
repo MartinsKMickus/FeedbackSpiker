@@ -9,10 +9,12 @@
 #include "utilities/input_handler.h"
 #include "utilities/code_measurements.h"
 #include "neuron_properties.h"
-#include <windows.h>
+#include "screen_utils/array_transformer.h"
+
 
 #ifdef _WIN32
 #include "win_screen/screen_framework.h"
+//#include <windows.h>
 #endif
 
 
@@ -25,8 +27,9 @@ char APP_VERSION[] = "UNDEFINED!";
 static void diagnostics()
 {
     size_t neuron_size = sizeof(struct Neuron);
-    int diagnostic_neuron_count = 250000;
+    int diagnostic_neuron_count = 1000;
     init_screen();
+    init_dest_screen(g_Width, g_Height);
     print_info("Size of Neuron: ");
     printf("%llu bytes!\n", neuron_size);
     print_info("Trying to initialize network with ");
@@ -40,23 +43,29 @@ static void diagnostics()
     connect_neuron_network_automatically();
     print_info("Initializing network on GPU!\n");
     init_gpu_network();
-    print_info("One step processing speed on GPU is: ");
+    print_info("Measuring GPU step performance!\n");
     double time_passed = get_step_performance(50);
+    print_info("One step processing speed on GPU is: ");
     printf("%.2f miliseconds\n", time_passed);
     print_info("Simulating 100000 steps on GPU!\n");
     start_chronometer();
-    neurons[5].spike_train = 1 << 1;
-    neurons[6].spike_train = 1 << 1;
-    neurons[7].spike_train = 1 << 1;
-    for (size_t i = 0; i < 10000; i++)
+    for (size_t i = 0; i < 100000; i++)
     {
+        neurons[0].spike_train = 1 << 0;
+        neurons[1].spike_train = 1 << 0;
+        neurons[2].spike_train = 1 << 0;
+        neurons[3].spike_train = 1 << 0;
+        neurons[4].spike_train = 1 << 0; 
+        neurons[5].spike_train = 1 << 0;
+        neurons[6].spike_train = 1 << 0;
+        //neurons[7].spike_train = 1 << 0;
+        neurons[8].spike_train = 1 << 0;
         refresh_gpu_inputs_from_cpu();
         simulate_gpu_step();
         transfer_gpu_spike_array_to_cpu();
-        live_spike_array_cpu[100250] = 0xFF;
-        fill_white_pixels(live_spike_array_cpu);
-        Sleep(100);
-        //printf("aaa\n");
+        resize_2d_array_nearest(live_spike_array_cpu, virtual_screen_w, virtual_screen_h, destination_screen, g_Width, g_Height);
+        fill_white_pixels(destination_screen);
+        //Sleep(1);
     }
     double elapsed = stop_chronometer();
     print_info("Execution time on GPU: ");

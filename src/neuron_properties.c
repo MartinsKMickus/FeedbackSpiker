@@ -12,7 +12,8 @@ static void init_neuron_properties()
 		return;
 	}
 	neuron_property_seed = time(0);
-	srand(neuron_property_seed);
+	//srand(neuron_property_seed);
+	srand(1); // FOR DEBUGGING TODO: FIXME
 	neuron_properties_initialized = 1;
 }
 

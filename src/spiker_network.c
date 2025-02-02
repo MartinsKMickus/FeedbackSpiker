@@ -4,6 +4,7 @@
 #include "spiker_network_gpu.h"
 #include "neuron_properties.h"
 #include "utilities/code_measurements.h"
+#include "math.h"
 
 struct Neuron *neurons = NULL;
 
@@ -18,12 +19,20 @@ int main_neuron_count = 0, main_neuron_spaces = 0, input_neurons = 0, output_neu
 int recommended_excitatory_neuron_count = 0, recommended_inhibitory_neuron_count = 0;
 float step_time = 1.0f;
 char* live_spike_array_cpu;
+int virtual_screen_w, virtual_screen_h;
 
 // CONFIGURATION variables
 int allow_self_connections = 0; // DO NOT ALLOW SELF CONNECTIONS
 const float SPIKE_VOLTAGE = 30.0f;
-int min_connections = 10, max_connections = MAX_NEURON_INPUTS;
+int min_connections = 50, max_connections = MAX_NEURON_INPUTS;
 
+void fill_virtual_screen_emptiness()
+{
+    for (size_t i = (input_neurons + main_neuron_count); i < (virtual_screen_h * virtual_screen_w); i++)
+    {
+        live_spike_array_cpu[i] = 128; // Gray
+    }
+}
 
 int init_network(int input_count, int main_neuron_count, int output_count)
 {
@@ -45,7 +54,10 @@ int init_network(int input_count, int main_neuron_count, int output_count)
     input_neurons = input_count;
     main_neuron_spaces = main_neuron_count;
     output_neurons = output_count;
-    live_spike_array_cpu = calloc(input_neurons + main_neuron_count, sizeof(char));
+    virtual_screen_w = (int)ceil(sqrt(input_count + main_neuron_count));
+    virtual_screen_h = virtual_screen_w;
+    live_spike_array_cpu = calloc(virtual_screen_h * virtual_screen_w, sizeof(char));
+    fill_virtual_screen_emptiness();
     print_success("Network initialized on CPU!\n");
 }
 
@@ -89,7 +101,7 @@ int add_connection(int from, int to, int latency, float weight)
         print_error("Cannot add neuron connection due to invalid latency: ");
         failure = 1;
     }
-    else if (weight < -0.5 || weight > 1) // TODO: Get these values from property file MIN/MAX
+    else if (weight < -1 || weight > 0.5) // TODO: Get these values from property file MIN/MAX
     {
         print_warning("Abnormal weight value for connection: ");
         warning = 1;
@@ -185,8 +197,15 @@ int connect_neuron_network_automatically()
             }
             // TODO: Set latency based on neuron distance
             latency = 1;
-            // TODO: Set weight based on connecting neuron type (check indexes, check if correct ratios)
-            connecting_weight = 0.1; // Default excitatory
+            // TODO: Set weight based on connecting neuron type (check if correct ratios)
+            if (connection_from < input_neurons + recommended_inhibitory_neuron_count && connection_from >= input_neurons)
+            {
+                connecting_weight = get_random_number() * -1.0f;
+            }
+            else
+            {
+                connecting_weight = get_random_number() * 0.5f;
+            }
             if (add_connection(connection_from + 1, i + 1, latency, connecting_weight))
             {
                 // Adding connection failed. Try again

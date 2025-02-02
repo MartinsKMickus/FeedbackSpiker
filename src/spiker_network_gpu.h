@@ -5,6 +5,8 @@
 #include "spiker_network.h" // For Neuron struct
 #include <cuda_runtime.h> // For CUDA runtime API (__device__, __global__, etc.)
 
+#define GPU_BLOCKS 128
+
 extern unsigned int GPU_READY;
 // TODO: Add flag to check for new changes in the network on CPU side
 

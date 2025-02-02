@@ -4,7 +4,7 @@
 
 #define NEURON_SPIKE_TRAIN_TYPE unsigned long
 #define MAX_NEURON_LATENCY sizeof(NEURON_SPIKE_TRAIN_TYPE) * 8
-#define EX_IN_RATIO 4.0f
+#define EX_IN_RATIO 16.0f
 
 // THESE MUST BE ACCESIBLE ALSO FROM THE GPU
 // TODO: transfer to dynamic variables: min_connections, max_connections
@@ -42,6 +42,8 @@ extern "C"
     extern int recommended_excitatory_neuron_count, recommended_inhibitory_neuron_count;
     extern float step_time; // Step time in milliseconds
     extern char* live_spike_array_cpu;
+    // Virtual screen dimensions for network 2d size info
+    extern int virtual_screen_w, virtual_screen_h;
 
     // Setting variables
     extern int allow_self_connections;
