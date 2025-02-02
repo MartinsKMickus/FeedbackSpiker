@@ -41,6 +41,7 @@ extern "C"
     extern int main_neuron_count, main_neuron_spaces, input_neurons, output_neurons;
     extern int recommended_excitatory_neuron_count, recommended_inhibitory_neuron_count;
     extern float step_time; // Step time in milliseconds
+    extern char* live_spike_array_cpu;
 
     // Setting variables
     extern int allow_self_connections;
@@ -94,9 +95,12 @@ int populate_neuron_network_automatically();
 /// <returns></returns>
 int connect_neuron_network_automatically();
 
-/// @brief Can test compute performance of the network
-/// @return Step time in milliseconds
-float get_step_performance();
+/// <summary>
+/// Can test compute performance of the network
+/// </summary>
+/// <param name="iterations">How many times to do check to get average</param>
+/// <returns>Step time in milliseconds</returns>
+float get_step_performance(unsigned int iterations);
 
 /// @brief Simulates a single step of the network
 void simulate_step();

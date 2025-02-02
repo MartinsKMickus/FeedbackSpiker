@@ -9,6 +9,11 @@
 #include "utilities/input_handler.h"
 #include "utilities/code_measurements.h"
 #include "neuron_properties.h"
+#include <windows.h>
+
+#ifdef _WIN32
+#include "win_screen/screen_framework.h"
+#endif
 
 
 #ifdef VERSION
@@ -20,25 +25,38 @@ char APP_VERSION[] = "UNDEFINED!";
 static void diagnostics()
 {
     size_t neuron_size = sizeof(struct Neuron);
-    int diagnostic_neuron_count = 100000;
+    int diagnostic_neuron_count = 250000;
+    init_screen();
     print_info("Size of Neuron: ");
     printf("%llu bytes!\n", neuron_size);
     print_info("Trying to initialize network with ");
     printf("%d neurons! ", diagnostic_neuron_count);
     printf("Network size: %llu bytes, %llu megabytes\n", neuron_size * diagnostic_neuron_count, neuron_size * diagnostic_neuron_count / 1024 / 1024);
     print_info("Initializing network on CPU!\n");
-    init_network(0, diagnostic_neuron_count, 0);
+    init_network(10, diagnostic_neuron_count, 0);
     print_info("Populating network!\n");
     populate_neuron_network_automatically();
     print_info("Connecting network!\n");
     connect_neuron_network_automatically();
     print_info("Initializing network on GPU!\n");
     init_gpu_network();
+    print_info("One step processing speed on GPU is: ");
+    double time_passed = get_step_performance(50);
+    printf("%.2f miliseconds\n", time_passed);
     print_info("Simulating 100000 steps on GPU!\n");
     start_chronometer();
-    for (size_t i = 0; i < 100000; i++)
+    neurons[5].spike_train = 1 << 1;
+    neurons[6].spike_train = 1 << 1;
+    neurons[7].spike_train = 1 << 1;
+    for (size_t i = 0; i < 10000; i++)
     {
+        refresh_gpu_inputs_from_cpu();
         simulate_gpu_step();
+        transfer_gpu_spike_array_to_cpu();
+        live_spike_array_cpu[100250] = 0xFF;
+        fill_white_pixels(live_spike_array_cpu);
+        Sleep(100);
+        //printf("aaa\n");
     }
     double elapsed = stop_chronometer();
     print_info("Execution time on GPU: ");

@@ -17,6 +17,7 @@ int main_neuron_count = 0, main_neuron_spaces = 0, input_neurons = 0, output_neu
 /// </summary>
 int recommended_excitatory_neuron_count = 0, recommended_inhibitory_neuron_count = 0;
 float step_time = 1.0f;
+char* live_spike_array_cpu;
 
 // CONFIGURATION variables
 int allow_self_connections = 0; // DO NOT ALLOW SELF CONNECTIONS
@@ -44,6 +45,7 @@ int init_network(int input_count, int main_neuron_count, int output_count)
     input_neurons = input_count;
     main_neuron_spaces = main_neuron_count;
     output_neurons = output_count;
+    live_spike_array_cpu = calloc(input_neurons + main_neuron_count, sizeof(char));
     print_success("Network initialized on CPU!\n");
 }
 
@@ -100,7 +102,7 @@ int add_connection(int from, int to, int latency, float weight)
     {
         return 1;
     }
-    size_t at_index = neurons[to].incomming_connections;
+    size_t at_index = neurons[to].incomming_connections++;
     if (at_index >= MAX_NEURON_INPUTS)
     {
         print_error("Cannot add neuron connection due to full input list: ");
@@ -159,9 +161,9 @@ int connect_neuron_network_automatically()
     start_chronometer();
     int neuron_connection_count_blueprint = 0, connection_from = 0, latency = 1;
     float connecting_weight = 0;
-    for (size_t i = 0; i < main_neuron_count; i++)
+    for (size_t i = input_neurons; i < main_neuron_count; i++)
     {
-        if (i % 20000 == 0)
+        if (i % 20000 == 0 && main_neuron_count > 20000)
         {
             print_info("Neuron network auto-connect progress: ");
             printf("%.2f%%\n", (float)i / (float)main_neuron_count * 100.0f);
@@ -184,8 +186,8 @@ int connect_neuron_network_automatically()
             // TODO: Set latency based on neuron distance
             latency = 1;
             // TODO: Set weight based on connecting neuron type (check indexes, check if correct ratios)
-            connecting_weight = 0.01; // Default excitatory
-            if (add_connection(connection_from + 1, input_neurons + i + 1, latency, connecting_weight))
+            connecting_weight = 0.1; // Default excitatory
+            if (add_connection(connection_from + 1, i + 1, latency, connecting_weight))
             {
                 // Adding connection failed. Try again
                 j--;
@@ -197,6 +199,24 @@ int connect_neuron_network_automatically()
     print_success("Neuron network automatically connected. ");
     printf("Took %.2f miliseconds\n", time_passed);
     return 0;
+}
+
+float get_step_performance(unsigned int iterations)
+{
+    // Make sure to init GPU side network after this again because we need clean data.
+    float time_passed = 0;
+    int gpu_status = 0;
+    start_chronometer();
+    for (size_t i = 0; i < iterations; i++)
+    {
+        gpu_status |= simulate_gpu_step();
+    }
+    time_passed = stop_chronometer()/(double)iterations;
+    if (gpu_status)
+    {
+        time_passed = -1; // Time is invalid because GPU process failed.
+    }
+    return time_passed;
 }
 
 void simulate_step()
