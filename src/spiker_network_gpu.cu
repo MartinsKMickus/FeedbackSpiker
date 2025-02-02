@@ -39,7 +39,7 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
         latencyBit = 1 << neurons[index].latencies[i];
         // If there is spike with specific latency
         if (neurons[inputIdx].spike_train & latencyBit) {
-            I += neurons[index].weights[i] * 1.6f;
+            I += neurons[index].weights[i] * 1.6f; // TODO: FIXME remove value
         }
     }
 

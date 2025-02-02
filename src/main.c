@@ -24,6 +24,66 @@ char APP_VERSION[] = VERSION;
 char APP_VERSION[] = "UNDEFINED!";
 #endif
 
+void audio_loopback(struct RotatingDoubleBuffer *buf)
+{
+    AUDIO_RESOLUTION_TYPE* donor;
+    AUDIO_RESOLUTION_TYPE* receiver;
+    //char donor_number, receiver_number;
+    // Turn on buffer
+    initialize_audio_buffer(buf);
+    while (1)
+    {
+        if (buf->input1_reading_ready)
+        {
+            donor = buf->input_buffer1;
+        }
+        else if (buf->input2_reading_ready)
+        {
+            donor = buf->input_buffer2;
+        }
+        else
+        {
+            continue; // All input consumed
+        }
+        if (buf->output1_writing_ready)
+        {
+            receiver = buf->output_buffer1;
+        }
+        else if (buf->output2_writing_ready)
+        {
+            receiver = buf->output_buffer2;
+        }
+        else
+        {
+            continue; // Output not empty yet (scary!!!)
+        }
+        for (int i = 0; i < FRAMES_PER_BUFFER; i++)
+        {
+            receiver[i] = donor[i];
+        }
+        if (receiver == buf->output_buffer1)
+        {
+            buf->output1_writing_ready = 0;
+            buf->output1_reading_ready = 1; // Final action if on, processor will read (faster, better)
+        }
+        else
+        {
+            buf->output2_writing_ready = 0;
+            buf->output2_reading_ready = 1; // Final action if on, processor will read (faster, better)
+        }
+        if (donor == buf->input_buffer1)
+        {
+            buf->input1_reading_ready = 0;
+            buf->input1_writing_ready = 1;
+        }
+        else
+        {
+            buf->input2_reading_ready = 0;
+            buf->input2_writing_ready = 1;
+        }
+    }
+}
+
 static void diagnostics()
 {
     size_t neuron_size = sizeof(struct Neuron);
@@ -47,9 +107,9 @@ static void diagnostics()
     double time_passed = get_step_performance(50);
     print_info("One step processing speed on GPU is: ");
     printf("%.2f miliseconds\n", time_passed);
-    print_info("Simulating 100000 steps on GPU!\n");
+    print_info("Simulating 10000 steps on GPU!\n");
     start_chronometer();
-    for (size_t i = 0; i < 100000; i++)
+    for (size_t i = 0; i < 10000; i++)
     {
         neurons[0].spike_train = 1 << 0;
         neurons[1].spike_train = 1 << 0;
@@ -99,16 +159,16 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
-    print_info("No arguments provided. Entering diagnostics mode!\n");
+   /* print_info("No arguments provided. Entering diagnostics mode!\n");
     diagnostics();
-    return 0;
+    return 0;*/
     PaError err;
 
     printf("Feedback Spiker! Version: %s\n", APP_VERSION);
     err = Pa_Initialize();
     check_portaudio_error(err);
 
-    struct RotatingDoubleBuffer data;
+    struct RotatingDoubleBuffer data = { 0 };
     PaStream *stream;
     /* Open an audio I/O stream. */
     err = Pa_OpenDefaultStream(&stream,
@@ -123,7 +183,7 @@ int main(int argc, char *argv[])
                                                      paFramesPerBufferUnspecified, which
                                                      tells PortAudio to pick the best,
                                                      possibly changing, buffer size.*/
-                              patestCallback, /* this is your callback function */
+                              audio_process_callback, /* this is your callback function */
                               &data);         /*This is a pointer that will be passed to
                                                         your callback*/
     check_portaudio_error(err);
@@ -136,32 +196,7 @@ int main(int argc, char *argv[])
     check_portaudio_error(err);
     Pa_Sleep(2000);
 
-    AUDIO_RESOLUTION_TYPE *donor;
-    AUDIO_RESOLUTION_TYPE *receiver;
-    char* buffer_mode = &data.current_buffer;
-
-    while (1)
-    {
-        char local_buffer_mode = *buffer_mode;
-
-        if (*buffer_mode == local_buffer_mode) {
-            continue;
-        }
-
-        *buffer_mode = local_buffer_mode;
-
-        // Process the active buffer
-        donor = (*buffer_mode == 1) ? data.input_buffer1 : data.input_buffer2;
-        receiver = (*buffer_mode == 1) ? data.output_buffer1 : data.output_buffer2;
-
-        for (int i = 0; i < FRAMES_PER_BUFFER; i++) {
-            receiver[i] = donor[i];
-        }
-
-        if (local_buffer_mode != *buffer_mode) {
-            print_warning("Active audio buffer changed while processing!\n");
-        }
-    }
+    audio_loopback(&data);
 
     // Pa_Sleep(15000);
 
