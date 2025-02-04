@@ -24,62 +24,79 @@ char APP_VERSION[] = VERSION;
 char APP_VERSION[] = "UNDEFINED!";
 #endif
 
-void audio_loopback(struct RotatingDoubleBuffer *buf)
+
+void demo_feedback(struct AudioRingBuffer* buf)
 {
-    AUDIO_RESOLUTION_TYPE* donor;
-    AUDIO_RESOLUTION_TYPE* receiver;
-    //char donor_number, receiver_number;
-    // Turn on buffer
-    initialize_audio_buffer(buf);
+    size_t neuron_size = sizeof(struct Neuron);
+    int diagnostic_neuron_count = 1000;
+    init_screen();
+    init_dest_screen(g_Width, g_Height);
+    init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, 0);
+    populate_neuron_network_automatically();
+    connect_neuron_network_automatically();
+    init_gpu_network();
+    print_info("Measuring GPU step performance!\n");
+    double time_passed = get_step_performance(1);
+    print_info("One step processing speed on GPU is: ");
+    printf("%.2f miliseconds\n", time_passed);
     while (1)
     {
-        if (buf->input1_reading_ready)
+        // Check if audio caller is in front of us
+        if ((buf->caller - buf->processor + RING_BUFFER_SIZE) % RING_BUFFER_SIZE < AUDIO_FRAMES_TO_PROCESS)
         {
-            donor = buf->input_buffer1;
+            // Not enough data gathered
+            //Sleep(process_fill_time);
+            continue;
         }
-        else if (buf->input2_reading_ready)
+        start_chronometer();
+        for (size_t i = 0; i < AUDIO_FRAMES_TO_PROCESS; i++)
         {
-            donor = buf->input_buffer2;
+            neurons[i].spike_train = buf->buffer_ring[buf->processor] & 1 << 0;
+            neurons[i + 1].spike_train = buf->buffer_ring[buf->processor] & 1 << 1;
+            neurons[i + 2].spike_train = buf->buffer_ring[buf->processor] & 1 << 2;
+            neurons[i + 3].spike_train = buf->buffer_ring[buf->processor] & 1 << 3;
+            neurons[i + 4].spike_train = buf->buffer_ring[buf->processor] & 1 << 4;
+            neurons[i + 5].spike_train = buf->buffer_ring[buf->processor] & 1 << 5;
+            neurons[i + 6].spike_train = buf->buffer_ring[buf->processor] & 1 << 6;
+            neurons[i + 7].spike_train = buf->buffer_ring[buf->processor++] & 1 << 7;
+            if (buf->processor >= RING_BUFFER_SIZE)
+            {
+                buf->processor = 0;
+            }
         }
-        else
+        refresh_gpu_inputs_from_cpu();
+        simulate_gpu_step();
+        transfer_gpu_spike_array_to_cpu();
+        resize_2d_array_nearest(live_spike_array_cpu, virtual_screen_w, virtual_screen_h, destination_screen, g_Width, g_Height);
+        fill_white_pixels(destination_screen);
+        double elapsed = stop_chronometer();
+        if (elapsed > buffer_reset_time)
         {
-            continue; // All input consumed
+            print_error("GPU is too slow and cannot process audio in real time. Iteration: ");
+            printf("%.2f miliseconds\n", elapsed);
         }
-        if (buf->output1_writing_ready)
+    }
+}
+
+void audio_loopback(struct AudioRingBuffer *buf)
+{
+    
+    while (1)
+    {
+        // Check if audio caller is in front of us
+        if ((buf->caller - buf->processor + RING_BUFFER_SIZE) % RING_BUFFER_SIZE < AUDIO_FRAMES_TO_PROCESS)
         {
-            receiver = buf->output_buffer1;
+            // Not enough data gathered
+            Sleep(process_fill_time);
+            continue;
         }
-        else if (buf->output2_writing_ready)
+        for (int i = 0; i < AUDIO_FRAMES_TO_PROCESS; i++)
         {
-            receiver = buf->output_buffer2;
-        }
-        else
-        {
-            continue; // Output not empty yet (scary!!!)
-        }
-        for (int i = 0; i < FRAMES_PER_BUFFER; i++)
-        {
-            receiver[i] = donor[i];
-        }
-        if (receiver == buf->output_buffer1)
-        {
-            buf->output1_writing_ready = 0;
-            buf->output1_reading_ready = 1; // Final action if on, processor will read (faster, better)
-        }
-        else
-        {
-            buf->output2_writing_ready = 0;
-            buf->output2_reading_ready = 1; // Final action if on, processor will read (faster, better)
-        }
-        if (donor == buf->input_buffer1)
-        {
-            buf->input1_reading_ready = 0;
-            buf->input1_writing_ready = 1;
-        }
-        else
-        {
-            buf->input2_reading_ready = 0;
-            buf->input2_writing_ready = 1;
+            buf->buffer_ring[buf->processor] = buf->buffer_ring[buf->processor++];
+            if (buf->processor >= RING_BUFFER_SIZE)
+            {
+                buf->processor = 0;
+            }
         }
     }
 }
@@ -139,17 +156,8 @@ int main(int argc, char *argv[])
 {
     // Check for command line arguments
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--diagnostics") == 0) {
-            print_info("Diagnostics mode!\n");
-            diagnostics();
-            return 0;
-        }
-        else if (strcmp(argv[i], "--version") == 0) {
-            print_info("Feedback Spiker! Version: ");
-            printf("%s\n", APP_VERSION);
-            return 0;
-        }
-        else if (strcmp(argv[i], "--help") == 0) {
+        if (strcmp(argv[i], "--help") == 0)
+        {
             printf("Feedback Spiker! Version: %s\n", APP_VERSION);
             printf("Usage: feedback_spiker [OPTION]\n");
             printf("Options:\n");
@@ -157,6 +165,22 @@ int main(int argc, char *argv[])
             printf("  --version      Show version information\n");
             printf("  --help         Show this help message\n");
             return 0;
+        }
+        else if (strcmp(argv[i], "--diagnostics") == 0)
+        {
+            print_info("Diagnostics mode!\n");
+            diagnostics();
+            return 0;
+        }
+        else if (strcmp(argv[i], "--version") == 0)
+        {
+            print_info("Feedback Spiker! Version: ");
+            printf("%s\n", APP_VERSION);
+            return 0;
+        }
+        else if (strcmp(argv[i], "--demo"))
+        {
+            print_info("Demonstration mode!\n");
         }
     }
    /* print_info("No arguments provided. Entering diagnostics mode!\n");
@@ -168,7 +192,9 @@ int main(int argc, char *argv[])
     err = Pa_Initialize();
     check_portaudio_error(err);
 
-    struct RotatingDoubleBuffer data = { 0 };
+    struct AudioRingBuffer data = { 0 };
+    data.caller = 0;
+    data.processor = 0;
     PaStream *stream;
     /* Open an audio I/O stream. */
     err = Pa_OpenDefaultStream(&stream,
@@ -176,7 +202,7 @@ int main(int argc, char *argv[])
                               1,        /* stereo output */
                               paFloat32, /* 32 bit floating point output */
                               SAMPLE_RATE,
-                              FRAMES_PER_BUFFER,            /* frames per buffer, i.e. the number
+                              AUDIO_FRAMES_TO_PROCESS,            /* frames per buffer, i.e. the number
                                                      of sample frames that PortAudio will
                                                      request from the callback. Many apps
                                                      may want to use
@@ -188,15 +214,19 @@ int main(int argc, char *argv[])
                                                         your callback*/
     check_portaudio_error(err);
     printf("====================================\n");
+    print_warning("Remember to random seed! Currently fixed 1\n");
     Pa_Sleep(2000);
     print_info("Audio buffer reset time: ");
     printf("%.3f milliseconds\n", buffer_reset_time);
+    print_info("Audio buffer process fill time: ");
+    printf("%.3f milliseconds\n", process_fill_time);
 
     err = Pa_StartStream(stream);
     check_portaudio_error(err);
     Pa_Sleep(2000);
 
-    audio_loopback(&data);
+    //audio_loopback(&data);
+    demo_feedback(&data);
 
     // Pa_Sleep(15000);
 
