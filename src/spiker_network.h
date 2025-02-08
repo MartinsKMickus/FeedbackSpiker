@@ -4,11 +4,12 @@
 
 #define NEURON_SPIKE_TRAIN_TYPE unsigned long
 #define MAX_NEURON_LATENCY sizeof(NEURON_SPIKE_TRAIN_TYPE) * 8
-#define EX_IN_RATIO 16.0f
+#define EX_IN_RATIO 4.0f
 
 // THESE MUST BE ACCESIBLE ALSO FROM THE GPU
 // TODO: transfer to dynamic variables: min_connections, max_connections
-#define MAX_NEURON_INPUTS 1024
+#define MIN_NEURON_INPUTS 32
+#define MAX_NEURON_INPUTS 32
 
 struct Neuron
 {
@@ -37,7 +38,8 @@ extern "C"
     /// Neuron array starts with X input neurons. Continues with N main (process neurons) starting with inhibitory and ending with excitatory. Last Y neurons of array are outputs (should be all excitatory)
     /// [INPUT, INPUT, INPUT, INH_N, EX_N, EX_N, EX_N, EX_N]
     /// </summary>
-    extern struct Neuron *neurons;
+    extern struct Neuron* neurons;
+    extern int first_output_neuron_index;
     extern int main_neuron_count, main_neuron_spaces, input_neurons, output_neurons;
     extern int recommended_excitatory_neuron_count, recommended_inhibitory_neuron_count;
     extern float step_time; // Step time in milliseconds

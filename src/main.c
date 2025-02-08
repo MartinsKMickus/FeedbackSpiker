@@ -28,10 +28,10 @@ char APP_VERSION[] = "UNDEFINED!";
 void demo_feedback(struct AudioRingBuffer* buf)
 {
     size_t neuron_size = sizeof(struct Neuron);
-    int diagnostic_neuron_count = 1000;
+    int diagnostic_neuron_count = 65536;
     init_screen();
     init_dest_screen(g_Width, g_Height);
-    init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, 0);
+    init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8);
     populate_neuron_network_automatically();
     connect_neuron_network_automatically();
     init_gpu_network();
@@ -39,26 +39,35 @@ void demo_feedback(struct AudioRingBuffer* buf)
     double time_passed = get_step_performance(1);
     print_info("One step processing speed on GPU is: ");
     printf("%.2f miliseconds\n", time_passed);
+    print_info("Screen information: ");
+    printf("Display: %d X %d. Virtual: %d X %d\n", g_Width, g_Height, virtual_screen_w, virtual_screen_h);
     while (1)
     {
         // Check if audio caller is in front of us
         if ((buf->caller - buf->processor + RING_BUFFER_SIZE) % RING_BUFFER_SIZE < AUDIO_FRAMES_TO_PROCESS)
         {
             // Not enough data gathered
-            //Sleep(process_fill_time);
             continue;
         }
         start_chronometer();
-        for (size_t i = 0; i < AUDIO_FRAMES_TO_PROCESS; i++)
+        for (size_t i = 0; i < AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8;i+=8)
         {
-            neurons[i].spike_train = buf->buffer_ring[buf->processor] & 1 << 0;
-            neurons[i + 1].spike_train = buf->buffer_ring[buf->processor] & 1 << 1;
-            neurons[i + 2].spike_train = buf->buffer_ring[buf->processor] & 1 << 2;
-            neurons[i + 3].spike_train = buf->buffer_ring[buf->processor] & 1 << 3;
-            neurons[i + 4].spike_train = buf->buffer_ring[buf->processor] & 1 << 4;
-            neurons[i + 5].spike_train = buf->buffer_ring[buf->processor] & 1 << 5;
-            neurons[i + 6].spike_train = buf->buffer_ring[buf->processor] & 1 << 6;
-            neurons[i + 7].spike_train = buf->buffer_ring[buf->processor++] & 1 << 7;
+            neurons[i].spike_train = buf->buffer_ring[buf->processor] & 1 << 0 && 1;
+            neurons[i + 1].spike_train = buf->buffer_ring[buf->processor] & 1 << 1 && 1;
+            neurons[i + 2].spike_train = buf->buffer_ring[buf->processor] & 1 << 2 && 1;
+            neurons[i + 3].spike_train = buf->buffer_ring[buf->processor] & 1 << 3 && 1;
+            neurons[i + 4].spike_train = buf->buffer_ring[buf->processor] & 1 << 4 && 1;
+            neurons[i + 5].spike_train = buf->buffer_ring[buf->processor] & 1 << 5 && 1;
+            neurons[i + 6].spike_train = buf->buffer_ring[buf->processor] & 1 << 6 && 1;
+            neurons[i + 7].spike_train = buf->buffer_ring[buf->processor] & 1 << 7 && 1;
+            buf->buffer_ring[buf->processor] = (live_spike_array_cpu[first_output_neuron_index + i] & 1 << 0) << 0;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 1] & 1 << 0) << 1;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 2] & 1 << 0) << 2;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 3] & 1 << 0) << 3;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 4] & 1 << 0) << 4;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 5] & 1 << 0) << 5;
+            buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 6] & 1 << 0) << 6;
+            buf->buffer_ring[buf->processor++] |= (live_spike_array_cpu[first_output_neuron_index + i + 7] & 1 << 0) << 7;
             if (buf->processor >= RING_BUFFER_SIZE)
             {
                 buf->processor = 0;
@@ -70,9 +79,9 @@ void demo_feedback(struct AudioRingBuffer* buf)
         resize_2d_array_nearest(live_spike_array_cpu, virtual_screen_w, virtual_screen_h, destination_screen, g_Width, g_Height);
         fill_white_pixels(destination_screen);
         double elapsed = stop_chronometer();
-        if (elapsed > buffer_reset_time)
+        if (elapsed > process_fill_time)
         {
-            print_error("GPU is too slow and cannot process audio in real time. Iteration: ");
+            print_error("Process is too slow and cannot process audio in real time. Iteration: ");
             printf("%.2f miliseconds\n", elapsed);
         }
     }

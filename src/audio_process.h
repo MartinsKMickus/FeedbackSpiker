@@ -2,10 +2,10 @@
 #include <portaudio.h> // PortAudio
 
 #define SAMPLE_RATE 48000
-#define AUDIO_FRAMES_TO_PROCESS 512
-#define RING_BUFFER_SIZE 2048
-#define AUDIO_RESOLUTION_TYPE int
-#define AUDIO_RESOLUTION_TYPE_CAPACITY 4294967296
+#define AUDIO_FRAMES_TO_PROCESS 1024
+#define RING_BUFFER_SIZE 4096
+#define AUDIO_RESOLUTION_TYPE char
+#define AUDIO_RESOLUTION_TYPE_CAPACITY 255
 
 /// <summary>
 /// Buffer reset time shows when old data will be started to be overwritten.

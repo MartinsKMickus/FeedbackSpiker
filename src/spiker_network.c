@@ -6,7 +6,8 @@
 #include "utilities/code_measurements.h"
 #include "math.h"
 
-struct Neuron *neurons = NULL;
+struct Neuron* neurons = NULL;
+int first_output_neuron_index = 0;
 
 /// <summary>
 /// MUST USE variables
@@ -24,11 +25,11 @@ int virtual_screen_w, virtual_screen_h;
 // CONFIGURATION variables
 int allow_self_connections = 0; // DO NOT ALLOW SELF CONNECTIONS
 const float SPIKE_VOLTAGE = 30.0f;
-int min_connections = 50, max_connections = MAX_NEURON_INPUTS;
+int min_connections = MIN_NEURON_INPUTS, max_connections = MAX_NEURON_INPUTS;
 
 void fill_virtual_screen_emptiness()
 {
-    for (size_t i = (input_neurons + main_neuron_count); i < (virtual_screen_h * virtual_screen_w); i++)
+    for (size_t i = 0; i < (virtual_screen_h * virtual_screen_w); i++)
     {
         live_spike_array_cpu[i] = 128; // Gray
     }
@@ -57,8 +58,10 @@ int init_network(int input_count, int main_neuron_count, int output_count)
     virtual_screen_w = (int)ceil(sqrt(input_count + main_neuron_count));
     virtual_screen_h = virtual_screen_w;
     live_spike_array_cpu = calloc(virtual_screen_h * virtual_screen_w, sizeof(char));
+    first_output_neuron_index = input_count + main_neuron_count - output_count;
     fill_virtual_screen_emptiness();
-    print_success("Network initialized on CPU!\n");
+    print_success("Network initialized on CPU! ");
+    printf("Inputs: %d. Process: %d. Outputs: %d\n", input_neurons, main_neuron_count, output_neurons);
 }
 
 int add_neuron(float v, float a, float b, float c, float d)
@@ -173,7 +176,7 @@ int connect_neuron_network_automatically()
     start_chronometer();
     int neuron_connection_count_blueprint = 0, connection_from = 0, latency = 1;
     float connecting_weight = 0;
-    for (size_t i = input_neurons; i < main_neuron_count; i++)
+    for (size_t i = input_neurons; i < input_neurons + main_neuron_count; i++)
     {
         if (i % 20000 == 0 && main_neuron_count > 20000)
         {
@@ -200,11 +203,11 @@ int connect_neuron_network_automatically()
             // TODO: Set weight based on connecting neuron type (check if correct ratios)
             if (connection_from < input_neurons + recommended_inhibitory_neuron_count && connection_from >= input_neurons)
             {
-                connecting_weight = get_random_number() * -1.0f;
+                connecting_weight = get_random_number() * -0.9f - 0.05f;
             }
             else
             {
-                connecting_weight = get_random_number() * 0.5f;
+                connecting_weight = get_random_number() * 0.4f + 0.05f;
             }
             if (add_connection(connection_from + 1, i + 1, latency, connecting_weight))
             {

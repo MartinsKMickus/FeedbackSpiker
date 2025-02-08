@@ -39,10 +39,22 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
         latencyBit = 1 << neurons[index].latencies[i];
         // If there is spike with specific latency
         if (neurons[inputIdx].spike_train & latencyBit) {
-            I += neurons[index].weights[i] * 1.6f; // TODO: FIXME remove value
+            I += neurons[index].weights[i]; // TODO: FIXME remove value
+            if (neurons[index].weights[i] < 0.00001 && neurons[index].weights[i] > 0)
+            {
+                printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
+            }
+            if (neurons[index].weights[i] > -0.00001 && neurons[index].weights[i] < 0)
+            {
+                printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
+            }
+            if (neurons[index].weights[i] < -0.9999)
+            {
+                printf("Neuron poisonous. Detected weight: %f\n", neurons[index].weights[i]);
+            }
         }
-    }
 
+    }
     //v = v + time_delta * (0.04 * v^2 + 5 * v + 140 - u + I)
     // TODO: Validate mathematics (code review)!!!
     /*float core_calculation = 0.04f * neurons[index].v * neurons[index].v + 5.0f * neurons[index].v + 140.0f - neurons[index].u + I;
@@ -53,12 +65,99 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
     // u = u + time_delta * (a * (b * v - u));
     // TODO: Validate mathematics (code review)!!!
     neurons[index].u = neurons[index].u + (step_time_gpu * (neurons[index].a * (neurons[index].b * neurons[index].v - neurons[index].u)));
-    //printf("Spike voltrage %f \n", SPIKE_VOLTAGE_GPU);
+    //printf("Voltrage %f \n", neurons[index].v);
     if (neurons[index].v >= SPIKE_VOLTAGE_GPU)
     {
+        // LEARNING!!!!!!!!!!!!!!!!!
+        for (int i = 0; i < neurons[index].incomming_connections; i++)
+        {
+            inputIdx = neurons[index].inputs[i] - 1;
+            latencyBit = 1 << neurons[index].latencies[i];
+            // If there is spike with specific latency
+            if (neurons[index].weights[i] > 0)
+            {
+                if (neurons[inputIdx].spike_train & latencyBit)
+                {
+                    neurons[index].weights[i] += 0.00025f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 1)
+                {
+                    neurons[index].weights[i] += 0.00015f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 2)
+                {
+                    neurons[index].weights[i] += 0.00005f;
+                }
+                else
+                {
+                    neurons[index].weights[i] *= 0.99999f;
+                }
+            }
+            else
+            {
+                if (neurons[inputIdx].spike_train & latencyBit)
+                {
+                    neurons[index].weights[i] *= 0.99995f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 1)
+                {
+                    neurons[index].weights[i] *= 0.999925f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 2)
+                {
+                    neurons[index].weights[i] *= 0.999991f;
+                }
+            }
+
+        }
         neurons[index].v = neurons[index].c;
         neurons[index].u = neurons[index].u + neurons[index].d;
         neurons[index].spike_train |= 1 << 0; // Set the first bit to 1 because the neuron spiked
+    }
+    else
+    {
+        // LEARNING NEGATIVE!!!!!!!!!!!!!!!!!
+        for (int i = 0; i < neurons[index].incomming_connections; i++)
+        {
+            inputIdx = neurons[index].inputs[i] - 1;
+            latencyBit = 1 << neurons[index].latencies[i];
+            // If there is spike with specific latency
+            if (neurons[index].weights[i] < 0)
+            {
+                if (neurons[inputIdx].spike_train & latencyBit)
+                {
+                    neurons[index].weights[i] -= 0.00005f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 1)
+                {
+                    neurons[index].weights[i] -= 0.000025f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 2)
+                {
+                    neurons[index].weights[i] -= 0.00001f;
+                }
+                else
+                {
+                    neurons[index].weights[i] *= 0.99999f;
+                }
+            }
+            else
+            {
+                if (neurons[inputIdx].spike_train & latencyBit)
+                {
+                    neurons[index].weights[i] *= 0.99995f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 1)
+                {
+                    neurons[index].weights[i] *= 0.99998f;
+                }
+                else if (neurons[inputIdx].spike_train & latencyBit << 2)
+                {
+                    neurons[index].weights[i] *= 0.99999f;
+                }
+            }
+
+        }
     }
     return;
 }
@@ -73,7 +172,7 @@ __global__ void move_to_next_step(Neuron* neurons, unsigned int max_index, unsig
     neurons[index].spike_train <<= 1;
 }
 
-__global__ void gather_spike_info(Neuron* neurons, char* spike_array, unsigned int max_index)
+__global__ void gather_spike_info(Neuron* neurons, char* spike_array, unsigned int input_count, unsigned int max_index)
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= max_index)
@@ -82,12 +181,18 @@ __global__ void gather_spike_info(Neuron* neurons, char* spike_array, unsigned i
     }
     if (neurons[index].spike_train & 1 << 1)
     {
-        // If anyone wondering... yes, I wrote this function myself
-        spike_array[index] = 0xFF;
+        if (index < input_count)
+        {
+            spike_array[index] = 128;
+        }
+        else
+        {
+            spike_array[index] = 0xFF;
+        }
     }
     else
     {
-        spike_array[index] = 0x0;
+        spike_array[index] = 0;
     }
     //spike_array[index] = 0xFF;
     return;
@@ -135,10 +240,10 @@ extern "C" int simulate_gpu_step()
         return 1;
     }
     // TODO: Implement atomic block or mutex of some sort for other processes to probe neurons and insert data
-    move_to_next_step KERNEL_ARGS2(main_neuron_count / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, main_neuron_count, input_neurons);
+    move_to_next_step KERNEL_ARGS2((input_neurons + main_neuron_count) / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, input_neurons + main_neuron_count, input_neurons);
     cudaDeviceSynchronize();
     check_cuda_failure(cudaGetLastError(), "Shifting spikes");
-    update_neuron KERNEL_ARGS2(main_neuron_count / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, main_neuron_count, input_neurons);
+    update_neuron KERNEL_ARGS2((input_neurons + main_neuron_count) / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, input_neurons + main_neuron_count, input_neurons);
     cudaDeviceSynchronize();
     check_cuda_failure(cudaGetLastError(), "Neuron update");
     // TODO: Optimize (do not copy each time)
@@ -159,7 +264,7 @@ int transfer_gpu_spike_array_to_cpu()
     {
         return 1;
     }
-    gather_spike_info KERNEL_ARGS2(main_neuron_count / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, live_spike_array_gpu, main_neuron_count);
+    gather_spike_info KERNEL_ARGS2((input_neurons + main_neuron_count) / GPU_BLOCKS + 1, GPU_BLOCKS)(gpu_neurons, live_spike_array_gpu, input_neurons, input_neurons + main_neuron_count);
     cudaDeviceSynchronize(); 
     cudaMemcpy(live_spike_array_cpu, live_spike_array_gpu, sizeof(char) * (input_neurons + main_neuron_count), cudaMemcpyDeviceToHost);
     return 0;

@@ -6,8 +6,8 @@
 // Global variables for demonstration
 static HBITMAP g_hDIBSection = NULL;
 static void* g_pBits = NULL;
-int     g_Width = 1500;
-int     g_Height = 1500;
+int     g_Width = 1000;
+int     g_Height = 1000;
 static HWND    g_hWnd = NULL;
 
 int g_Running = TRUE;
