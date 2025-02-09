@@ -28,7 +28,7 @@ char APP_VERSION[] = "UNDEFINED!";
 void demo_feedback(struct AudioRingBuffer* buf)
 {
     size_t neuron_size = sizeof(struct Neuron);
-    int diagnostic_neuron_count = 65536;
+    int diagnostic_neuron_count = 32768;
     init_screen();
     init_dest_screen(g_Width, g_Height);
     init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8);
@@ -52,14 +52,22 @@ void demo_feedback(struct AudioRingBuffer* buf)
         start_chronometer();
         for (size_t i = 0; i < AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8;i+=8)
         {
-            neurons[i].spike_train = buf->buffer_ring[buf->processor] & 1 << 0 && 1;
-            neurons[i + 1].spike_train = buf->buffer_ring[buf->processor] & 1 << 1 && 1;
-            neurons[i + 2].spike_train = buf->buffer_ring[buf->processor] & 1 << 2 && 1;
-            neurons[i + 3].spike_train = buf->buffer_ring[buf->processor] & 1 << 3 && 1;
-            neurons[i + 4].spike_train = buf->buffer_ring[buf->processor] & 1 << 4 && 1;
-            neurons[i + 5].spike_train = buf->buffer_ring[buf->processor] & 1 << 5 && 1;
-            neurons[i + 6].spike_train = buf->buffer_ring[buf->processor] & 1 << 6 && 1;
-            neurons[i + 7].spike_train = buf->buffer_ring[buf->processor] & 1 << 7 && 1;
+            neurons[i].spike_train <<= 1;
+            neurons[i + 1].spike_train <<= 1;
+            neurons[i + 2].spike_train <<= 1;
+            neurons[i + 3].spike_train <<= 1;
+            neurons[i + 4].spike_train <<= 1;
+            neurons[i + 5].spike_train <<= 1;
+            neurons[i + 6].spike_train <<= 1;
+            neurons[i + 7].spike_train <<= 1;
+            neurons[i].spike_train |= buf->buffer_ring[buf->processor] & 1 << 0 && 1;
+            neurons[i + 1].spike_train |= buf->buffer_ring[buf->processor] & 1 << 1 && 1;
+            neurons[i + 2].spike_train |= buf->buffer_ring[buf->processor] & 1 << 2 && 1;
+            neurons[i + 3].spike_train |= buf->buffer_ring[buf->processor] & 1 << 3 && 1;
+            neurons[i + 4].spike_train |= buf->buffer_ring[buf->processor] & 1 << 4 && 1;
+            neurons[i + 5].spike_train |= buf->buffer_ring[buf->processor] & 1 << 5 && 1;
+            neurons[i + 6].spike_train |= buf->buffer_ring[buf->processor] & 1 << 6 && 1;
+            neurons[i + 7].spike_train |= buf->buffer_ring[buf->processor] & 1 << 7 && 1;
             buf->buffer_ring[buf->processor] = (live_spike_array_cpu[first_output_neuron_index + i] & 1 << 0) << 0;
             buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 1] & 1 << 0) << 1;
             buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 2] & 1 << 0) << 2;

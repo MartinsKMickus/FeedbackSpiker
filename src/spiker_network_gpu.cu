@@ -39,7 +39,7 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
         latencyBit = 1 << neurons[index].latencies[i];
         // If there is spike with specific latency
         if (neurons[inputIdx].spike_train & latencyBit) {
-            I += neurons[index].weights[i]; // TODO: FIXME remove value
+            I += neurons[index].weights[i] * 7; // TODO: FIXME remove value
             if (neurons[index].weights[i] < 0.00001 && neurons[index].weights[i] > 0)
             {
                 printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
@@ -48,10 +48,10 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
             {
                 printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
             }
-            if (neurons[index].weights[i] < -0.9999)
+            /*if (neurons[index].weights[i] < -0.9999)
             {
                 printf("Neuron poisonous. Detected weight: %f\n", neurons[index].weights[i]);
-            }
+            }*/
         }
 
     }
@@ -90,14 +90,14 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
                 }
                 else
                 {
-                    neurons[index].weights[i] *= 0.99999f;
+                    neurons[index].weights[i] *= 0.999999f;
                 }
             }
             else
             {
                 if (neurons[inputIdx].spike_train & latencyBit)
                 {
-                    neurons[index].weights[i] *= 0.99995f;
+                    neurons[index].weights[i] *= 0.9999f;
                 }
                 else if (neurons[inputIdx].spike_train & latencyBit << 1)
                 {

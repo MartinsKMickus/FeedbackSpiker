@@ -171,14 +171,88 @@ int populate_neuron_network_automatically()
     return 0;
 }
 
+/// <summary>
+/// Function to get the absolute index in the original AAAAABBBBBBBBBB array. Assuming it is virtual ABBABBABBABBABB
+/// </summary>
+/// <param name="count_a"></param>
+/// <param name="count_b"></param>
+/// <param name="N">What is the current absolute index</param>
+/// <param name="M">How many items to look before index N in virtual array</param>
+/// <returns>Absolute index of an element. If negative: -1 generic issue. If -2 --> resulting in negative index, -3 --> other issue</returns>
+int get_absolute_index(int count_a, int count_b, int N, int M) {
+    if (N < 0 || M < 0)
+    {
+        print_error("Absolute index calculation for connection had wrong ");
+        printf("N %d and M %d\n", M, N);
+        return -1;
+    }
+    if (count_a > count_b)
+    {
+        print_error("Absolute index calculation for connection had wrong ");
+        printf("A count %d and B count %d\n", count_a, count_b);
+        return -1;
+    }
+
+    // Element distribution follows a regular pattern
+    int stride = (count_a + count_b) / count_a;
+    int target_position = N - M; // Looking M steps back
+    int abs_index;
+    double how_far, target_behind;
+
+    if (N < count_a)
+    {
+        // N is in A zone
+        how_far = (double)N / (double)count_a;
+        target_behind = (double)M / (double)count_a;
+    }
+    else
+    {
+        // N is in B zone
+        how_far = (double)(N - count_a) / (double)count_b;
+        target_behind = (double)M / (double)count_b;
+    }
+
+    if (how_far - target_behind < 0)
+    {
+         // M is asking for an element that is before the start of array
+         return -2;
+    }
+    if (target_position % stride == 0)
+    {
+        // Resulting index is A
+        // Getting it by achieving index from part
+        abs_index = (int)round((how_far - target_behind) * count_a);
+    }
+    else
+    {
+        // Resulting index is B
+        // Getting it by achieving index from part + A elements
+        abs_index = (int)round(((how_far - target_behind) * count_b) + count_a);
+    }
+
+    if (abs_index >= count_a + count_b) {
+        print_error("Got index ");
+        printf("%d but total only %d\n", abs_index, count_a + count_b);
+        return -3; // Out of bounds
+    }
+
+    return abs_index;
+}
+
 int connect_neuron_network_automatically()
 {
     start_chronometer();
     int neuron_connection_count_blueprint = 0, connection_from = 0, latency = 1;
     float connecting_weight = 0;
+    size_t synapse_count = 0;
+    if (recommended_inhibitory_neuron_count + recommended_excitatory_neuron_count != main_neuron_count)
+    {
+        print_error("Main neuron count incorrect!\n");
+        return 1;
+    }
     for (size_t i = input_neurons; i < input_neurons + main_neuron_count; i++)
     {
-        if (i % 20000 == 0 && main_neuron_count > 20000)
+        if (i % 20000 == 0 && main_neuron_count > 20000 && i != input_neurons + main_neuron_count - 1)
         {
             print_info("Neuron network auto-connect progress: ");
             printf("%.2f%%\n", (float)i / (float)main_neuron_count * 100.0f);
@@ -190,12 +264,67 @@ int connect_neuron_network_automatically()
             printf("Tried to make %d connections yet total free spaces %d\n", neuron_connection_count_blueprint, MAX_NEURON_INPUTS);
             return 1;
         }
+        else if (neuron_connection_count_blueprint == 0)
+        {
+            print_error("Fatal failure while auto-generating neuron connection count. Generated 0 connections.\n");
+            return 1;
+        }
         for (size_t j = 0; j < neuron_connection_count_blueprint; j++)
         {
-            connection_from = get_random_number() * (input_neurons + main_neuron_count - 1);
+            if (SEQUENTIAL_NETWORK)
+            {
+                // Based on neuron_connection_count_blueprint neurons will be connected this ammount of times with neurons before them
+                // This should create a wave like data distribution
+                // If not enough neurons before will be available we will use max possible connections
+                // Because of inhibitory neurons at the start we need to assume they are combined, therefore 1/3 into indexes of inhibitory will count as 1/3 of excitatory
+                // Random function should generate a number that will be converted to either input, inhibitory, or excitatory index:
+                // Inputs at the start --> inhibitory + excitatory (mixed logically not phisically)
+                connection_from = get_absolute_index(recommended_inhibitory_neuron_count, recommended_excitatory_neuron_count, i - input_neurons, j + 1);
+                if (connection_from == -2)
+                {
+                    // Connection can get to inputs (using all inputs NOT REALLY, randomly)
+                    connection_from = get_random_number() * (input_neurons - 1);
+                }
+                else if (connection_from < 0)
+                {
+                    print_error("Fatal failure while getting absolute connection for ");
+                    printf("%lld neuron.\n", i);
+                    return 1;
+                }
+                else
+                {
+                    connection_from += input_neurons;
+                }
+                if (i > input_neurons + recommended_inhibitory_neuron_count && connection_from > i)
+                {
+                    print_error("Neurons trying to connect future. ");
+                    printf("I = %lld, J = %lld, Asked conn = %d, I_N %d, EX_N %d\n", i, j, connection_from, recommended_inhibitory_neuron_count, recommended_excitatory_neuron_count);
+                }
+            }
+            else
+            {
+                if (i < input_neurons + main_neuron_count - output_neurons)
+                {
+                    // Pure process neurons
+                    connection_from = get_random_number() * (input_neurons + main_neuron_count - 1);
+                }
+                else
+                {
+                    // Output neurons (won't take inputs)
+                    connection_from = get_random_number() * (main_neuron_count - 1) + input_neurons;
+                }
+            }
             if (i == connection_from)
             {
-                j--;
+                if (SEQUENTIAL_NETWORK)
+                {
+                    print_warning("Same neuron connection. ");
+                    printf("I = %lld, J = %lld, Asked conn = %d\n", i, j, connection_from);
+                }
+                else
+                {
+                    j--;
+                }
                 continue;
             }
             // TODO: Set latency based on neuron distance
@@ -211,15 +340,21 @@ int connect_neuron_network_automatically()
             }
             if (add_connection(connection_from + 1, i + 1, latency, connecting_weight))
             {
+                // TODO: Check if not repeating conn?
                 // Adding connection failed. Try again
+                print_warning("This auto-connect call should not be happening! Something is wrong.\n");
                 j--;
                 // TODO: PREVENT FOREVER LOOP if too much failures!!!
             }
+            synapse_count++;
         }
     }
+    print_info("Neuron network auto-connect progress: 100%\n");
     double time_passed = stop_chronometer();
     print_success("Neuron network automatically connected. ");
     printf("Took %.2f miliseconds\n", time_passed);
+    print_info("Neuron network synapse count: ");
+    printf("%lld\n", synapse_count);
     return 0;
 }
 

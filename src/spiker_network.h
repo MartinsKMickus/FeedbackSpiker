@@ -9,7 +9,10 @@
 // THESE MUST BE ACCESIBLE ALSO FROM THE GPU
 // TODO: transfer to dynamic variables: min_connections, max_connections
 #define MIN_NEURON_INPUTS 32
-#define MAX_NEURON_INPUTS 32
+#define MAX_NEURON_INPUTS 64
+
+// Have neurons connected in order. If not then random.
+#define SEQUENTIAL_NETWORK 0
 
 struct Neuron
 {
