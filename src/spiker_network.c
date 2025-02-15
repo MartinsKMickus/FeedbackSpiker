@@ -329,6 +329,7 @@ int connect_neuron_network_automatically()
             }
             // TODO: Set latency based on neuron distance
             latency = 1;
+            latency = (int)(get_random_number() * 20 + 1);
             // TODO: Set weight based on connecting neuron type (check if correct ratios)
             if (connection_from < input_neurons + recommended_inhibitory_neuron_count && connection_from >= input_neurons)
             {

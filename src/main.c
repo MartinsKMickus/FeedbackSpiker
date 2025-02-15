@@ -28,10 +28,12 @@ char APP_VERSION[] = "UNDEFINED!";
 void demo_feedback(struct AudioRingBuffer* buf)
 {
     size_t neuron_size = sizeof(struct Neuron);
-    int diagnostic_neuron_count = 32768;
+    int diagnostic_neuron_count = 65536;
+    init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8);
+    g_Height = virtual_screen_h;
+    g_Width = virtual_screen_w;
     init_screen();
     init_dest_screen(g_Width, g_Height);
-    init_network(AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8, diagnostic_neuron_count, AUDIO_FRAMES_TO_PROCESS * sizeof(AUDIO_RESOLUTION_TYPE) * 8);
     populate_neuron_network_automatically();
     connect_neuron_network_automatically();
     init_gpu_network();
@@ -41,12 +43,18 @@ void demo_feedback(struct AudioRingBuffer* buf)
     printf("%.2f miliseconds\n", time_passed);
     print_info("Screen information: ");
     printf("Display: %d X %d. Virtual: %d X %d\n", g_Width, g_Height, virtual_screen_w, virtual_screen_h);
+    int buffer_dept = 0;
     while (1)
     {
         // Check if audio caller is in front of us
         if ((buf->caller - buf->processor + RING_BUFFER_SIZE) % RING_BUFFER_SIZE < AUDIO_FRAMES_TO_PROCESS)
         {
             // Not enough data gathered
+            if (buffer_dept > 0)
+            {
+                // This means there are no any future buffer left as present data
+                buffer_dept--;
+            }
             continue;
         }
         start_chronometer();
@@ -76,6 +84,25 @@ void demo_feedback(struct AudioRingBuffer* buf)
             buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 5] & 1 << 0) << 5;
             buf->buffer_ring[buf->processor] |= (live_spike_array_cpu[first_output_neuron_index + i + 6] & 1 << 0) << 6;
             buf->buffer_ring[buf->processor++] |= (live_spike_array_cpu[first_output_neuron_index + i + 7] & 1 << 0) << 7;
+            // Feed own output. First clear nth bit
+            int feedback_bit = 10;
+            neurons[i].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 1].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 2].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 3].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 4].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 5].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 6].spike_train &= ~(1 << feedback_bit);
+            neurons[i + 7].spike_train &= ~(1 << feedback_bit);
+            // Then apply feedback
+            neurons[i].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i] & 1 << 0) << feedback_bit;
+            neurons[i + 1].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 1] & 1 << 0) << feedback_bit;
+            neurons[i + 2].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 2] & 1 << 0) << feedback_bit;
+            neurons[i + 3].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 3] & 1 << 0) << feedback_bit;
+            neurons[i + 4].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 4] & 1 << 0) << feedback_bit;
+            neurons[i + 5].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 5] & 1 << 0) << feedback_bit;
+            neurons[i + 6].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 6] & 1 << 0) << feedback_bit;
+            neurons[i + 7].spike_train |= (live_spike_array_cpu[first_output_neuron_index + i + 7] & 1 << 0) << feedback_bit;
             if (buf->processor >= RING_BUFFER_SIZE)
             {
                 buf->processor = 0;
@@ -84,14 +111,23 @@ void demo_feedback(struct AudioRingBuffer* buf)
         refresh_gpu_inputs_from_cpu();
         simulate_gpu_step();
         transfer_gpu_spike_array_to_cpu();
-        resize_2d_array_nearest(live_spike_array_cpu, virtual_screen_w, virtual_screen_h, destination_screen, g_Width, g_Height);
-        fill_white_pixels(destination_screen);
+        //resize_2d_array_nearest(live_spike_array_cpu, virtual_screen_w, virtual_screen_h, destination_screen, g_Width, g_Height);
+        fill_white_pixels(live_spike_array_cpu);
         double elapsed = stop_chronometer();
         if (elapsed > process_fill_time)
         {
-            print_error("Process is too slow and cannot process audio in real time. Iteration: ");
-            printf("%.2f miliseconds\n", elapsed);
+            buffer_dept++;
+            if (buffer_dept > buffer_reset_time/process_fill_time)
+            {
+                print_error("Process is too slow and real-time audio chunk is discarded. Iteration: ");
+                printf("%.2f miliseconds\n", elapsed);
+            }
         }
+        /*else if (elapsed > 0.99 * process_fill_time)
+        {
+            print_warning("Process is hardly keeping up exceeding 90% process fill time. Iteration: ");
+            printf("%.2f miliseconds\n", elapsed);
+        }*/
     }
 }
 

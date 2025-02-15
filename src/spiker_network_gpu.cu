@@ -23,6 +23,7 @@ char* live_spike_array_gpu;
 __device__ float SPIKE_VOLTAGE_GPU;
 __device__ int MAX_NEURON_INPUTS_GPU;
 __device__ float step_time_gpu = 1.0f;
+__device__ float LEARNING_FACTOR = 1.0f;
 
 __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned int min_index)
 {
@@ -39,12 +40,12 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
         latencyBit = 1 << neurons[index].latencies[i];
         // If there is spike with specific latency
         if (neurons[inputIdx].spike_train & latencyBit) {
-            I += neurons[index].weights[i] * 7; // TODO: FIXME remove value
-            if (neurons[index].weights[i] < 0.00001 && neurons[index].weights[i] > 0)
+            I += neurons[index].weights[i] * 10; // TODO: FIXME remove value
+            if (neurons[index].weights[i] < 0.001 && neurons[index].weights[i] > 0)
             {
                 printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
             }
-            if (neurons[index].weights[i] > -0.00001 && neurons[index].weights[i] < 0)
+            if (neurons[index].weights[i] > -0.001 && neurons[index].weights[i] < 0)
             {
                 printf("Neuron connection dying. Detected weight: %f\n", neurons[index].weights[i]);
             }
@@ -61,7 +62,8 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
     core_calculation *= step_time_gpu;
     neurons[index].v += core_calculation;*/
     // TODO: fix hardcoded time
-    neurons[index].v = neurons[index].v + step_time_gpu * (0.04f * neurons[index].v * neurons[index].v + 5.0f * neurons[index].v + 140.0f - neurons[index].u + I);
+    neurons[index].v = neurons[index].v + step_time_gpu/2 * (0.04f * neurons[index].v * neurons[index].v + 5.0f * neurons[index].v + 140.0f - neurons[index].u + I);
+    neurons[index].v = neurons[index].v + step_time_gpu/2 * (0.04f * neurons[index].v * neurons[index].v + 5.0f * neurons[index].v + 140.0f - neurons[index].u + I);
     // u = u + time_delta * (a * (b * v - u));
     // TODO: Validate mathematics (code review)!!!
     neurons[index].u = neurons[index].u + (step_time_gpu * (neurons[index].a * (neurons[index].b * neurons[index].v - neurons[index].u)));
@@ -78,15 +80,15 @@ __global__ void update_neuron(Neuron *neurons, unsigned int max_index, unsigned 
             {
                 if (neurons[inputIdx].spike_train & latencyBit)
                 {
-                    neurons[index].weights[i] += 0.00025f;
+                    neurons[index].weights[i] += 0.00025f * LEARNING_FACTOR;
                 }
                 else if (neurons[inputIdx].spike_train & latencyBit << 1)
                 {
-                    neurons[index].weights[i] += 0.00015f;
+                    neurons[index].weights[i] += 0.00015f * LEARNING_FACTOR;
                 }
                 else if (neurons[inputIdx].spike_train & latencyBit << 2)
                 {
-                    neurons[index].weights[i] += 0.00005f;
+                    neurons[index].weights[i] += 0.00005f * LEARNING_FACTOR;
                 }
                 else
                 {
